@@ -6,6 +6,11 @@ import { RepoTreeProvider, WikiTreeProvider, ActionsTreeProvider } from './ui/tr
 import { StatusBar } from './ui/statusBar';
 import { CommandRegistrar } from './ui/commands';
 
+function updateContexts(binary: BinaryManager, ws: WorkspaceManager) {
+    vscode.commands.executeCommand('setContext', 'reference:hasBinary', !!binary.getBinaryPath());
+    vscode.commands.executeCommand('setContext', 'reference:initialized', ws.isInitialized());
+}
+
 export async function activate(context: vscode.ExtensionContext) {
     const outputChannel = vscode.window.createOutputChannel('Reference');
     context.subscriptions.push(outputChannel);
@@ -20,11 +25,15 @@ export async function activate(context: vscode.ExtensionContext) {
     // Detect binary
     await binary.detect();
     outputChannel.appendLine(`Binary: ${binary.getBinaryPath() || 'not found'}`);
+    outputChannel.appendLine(`Initialized: ${ws.isInitialized()}`);
+
+    // Set initial contexts
+    updateContexts(binary, ws);
 
     // Tree providers
     const repoTree = new RepoTreeProvider(ws, outputChannel);
     const wikiTree = new WikiTreeProvider(ws);
-    const actionsTree = new ActionsTreeProvider();
+    const actionsTree = new ActionsTreeProvider(ws);
 
     // Register tree views
     const repoView = vscode.window.createTreeView('reference.repos', {
@@ -58,6 +67,7 @@ export async function activate(context: vscode.ExtensionContext) {
             repoTree.refresh();
             wikiTree.refresh();
             statusBar.update();
+            updateContexts(binary, ws);
         });
     }
     context.subscriptions.push(ws);
@@ -66,7 +76,10 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('reference.binaryPath')) {
-                binary.detect().then(() => statusBar.update());
+                binary.detect().then(() => {
+                    statusBar.update();
+                    updateContexts(binary, ws);
+                });
             }
             if (e.affectsConfiguration('reference.autoRefresh')) {
                 const newConfig = vscode.workspace.getConfiguration('reference');

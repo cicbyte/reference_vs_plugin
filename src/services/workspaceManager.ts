@@ -19,6 +19,13 @@ export class WorkspaceManager {
         return root ? path.join(root, '.reference') : undefined;
     }
 
+    /** Check if the workspace has been initialized (has .reference/reference.settings.json). */
+    isInitialized(): boolean {
+        const refDir = this.getReferenceDir();
+        if (!refDir) { return false; }
+        return fs.existsSync(path.join(refDir, 'reference.settings.json'));
+    }
+
     getReposDir(): string | undefined {
         const refDir = this.getReferenceDir();
         return refDir ? path.join(refDir, 'repos') : undefined;

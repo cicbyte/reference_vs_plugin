@@ -229,11 +229,23 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionTreeIt
     private _onDidChangeTree = new vscode.EventEmitter<ActionTreeItem | undefined | null>();
     readonly onDidChangeTreeData = this._onDidChangeTree.event;
 
+    constructor(private ws: WorkspaceManager) {}
+
+    refresh(): void {
+        this._onDidChangeTree.fire(undefined);
+    }
+
     getTreeItem(element: ActionTreeItem): vscode.TreeItem {
         return element;
     }
 
     async getChildren(): Promise<ActionTreeItem[]> {
+        if (!this.ws.isInitialized()) {
+            return [
+                new ActionTreeItem('Initialize Workspace', 'reference.init', 'zap'),
+                new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
+            ];
+        }
         return [
             new ActionTreeItem('Add Repository', 'reference.addRepo', 'add'),
             new ActionTreeItem('Remove Repository', 'reference.removeRepo', 'trash'),

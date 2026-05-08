@@ -19,8 +19,9 @@ export class CommandRegistrar {
 
     registerAll(context: vscode.ExtensionContext): void {
         const registrations: vscode.Disposable[] = [
-            // Binary
+            // Binary & Init
             vscode.commands.registerCommand('reference.checkBinary', () => this.checkBinary()),
+            vscode.commands.registerCommand('reference.init', () => this.initWorkspace()),
             // Repo management
             vscode.commands.registerCommand('reference.addRepo', () => this.addRepo()),
             vscode.commands.registerCommand('reference.removeRepo', (node?: any) => this.removeRepo(node)),
@@ -103,6 +104,30 @@ export class CommandRegistrar {
             }
         }
         this.statusBar.update();
+    }
+
+    private async initWorkspace(): Promise<void> {
+        if (!this.requireBinary()) { return; }
+
+        if (this.ws.isInitialized()) {
+            vscode.window.showInformationMessage('This workspace is already initialized.');
+            return;
+        }
+
+        await vscode.window.withProgress(
+            { title: 'Initializing Reference...', location: vscode.ProgressLocation.Notification },
+            async () => {
+                const result = await this.cli.init();
+                if (result.success) {
+                    vscode.window.showInformationMessage('Reference initialized successfully.');
+                    this.repoTree.refresh();
+                    this.wikiTree.refresh();
+                    this.statusBar.update();
+                } else {
+                    vscode.window.showErrorMessage(`Initialization failed: ${result.error}`);
+                }
+            },
+        );
     }
 
     // ─── Repo Management ─────────────────────────────────────

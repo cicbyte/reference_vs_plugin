@@ -54,13 +54,28 @@
     "viewsWelcome": [
       {
         "view": "reference.repos",
-        "contents": "No repositories referenced yet.\n[Add Repository](command:reference.addRepo)\n\nMake sure the `reference` CLI is installed. [Check Installation](command:reference.checkBinary)",
-        "when": "reference:hasBinary"
+        "contents": "This workspace has not been initialized with Reference yet.\n[Initialize Now](command:reference.init)\n\nTo get started, the extension will create a `.reference/` directory in your workspace.\n\nDon't have the CLI? [Check Installation](command:reference.checkBinary)",
+        "when": "!reference:initialized"
+      },
+      {
+        "view": "reference.repos",
+        "contents": "No repositories referenced yet.\n[Add Repository](command:reference.addRepo)",
+        "when": "reference:initialized && reference:hasBinary"
       },
       {
         "view": "reference.repos",
         "contents": "Reference CLI not found.\n[Install / Configure](command:reference.checkBinary)",
-        "when": "!reference:hasBinary"
+        "when": "reference:initialized && !reference:hasBinary"
+      },
+      {
+        "view": "reference.wiki",
+        "contents": "No knowledge files yet. Knowledge files are generated when you analyze or explore a repository.",
+        "when": "!reference:initialized"
+      },
+      {
+        "view": "reference.actions",
+        "contents": "Please initialize Reference first.\n[Initialize Now](command:reference.init)",
+        "when": "!reference:initialized"
       }
     ],
     "commands": [
@@ -78,6 +93,10 @@
         "command": "reference.updateRepo",
         "title": "Reference: Update Repository",
         "icon": "$(sync)"
+      },
+      {
+        "command": "reference.init",
+        "title": "Reference: Initialize Workspace"
       },
       {
         "command": "reference.updateAllRepos",
