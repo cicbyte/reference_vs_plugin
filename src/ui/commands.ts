@@ -109,6 +109,22 @@ export class CommandRegistrar {
     private async addRepo(): Promise<void> {
         if (!this.requireBinary()) { return; }
 
+        const mode = await vscode.window.showQuickPick(
+            [
+                { label: '$(globe) Remote Repository', description: 'Clone from URL', value: 'remote' as const },
+                { label: '$(folder) Local Repository', description: 'Link a local Git repo', value: 'local' as const },
+            ],
+            { placeHolder: 'Select repository source type' },
+        );
+        if (!mode) { return; }
+
+        if (mode.value === 'local') {
+            return this.addLocalRepo();
+        }
+        return this.addRemoteRepo();
+    }
+
+    private async addRemoteRepo(): Promise<void> {
         const url = await vscode.window.showInputBox({
             prompt: 'Enter repository URL or owner/repo',
             placeHolder: 'https://github.com/owner/repo or owner/repo',
@@ -121,12 +137,54 @@ export class CommandRegistrar {
             placeHolder: 'Auto-detect from URL',
         });
 
+        const branch = await vscode.window.showInputBox({
+            prompt: 'Enter branch or tag (optional)',
+            placeHolder: 'Default branch',
+        });
+
         await vscode.window.withProgress(
-            { title: `Adding repository: ${url}`, location: vscode.ProgressLocation.Notification, cancellable: true },
+            { title: `Adding remote repository: ${url}`, location: vscode.ProgressLocation.Notification, cancellable: true },
             async () => {
-                const result = await this.cli.addRepo(url, name || undefined, { depth: 1 });
+                const result = await this.cli.addRepo(url, name || undefined, {
+                    depth: 1,
+                    branch: branch || undefined,
+                });
                 if (result.success) {
-                    vscode.window.showInformationMessage(`Repository added successfully.`);
+                    vscode.window.showInformationMessage('Repository added successfully.');
+                    this.repoTree.refresh();
+                    this.wikiTree.refresh();
+                    this.statusBar.update();
+                } else {
+                    vscode.window.showErrorMessage(`Failed to add repository: ${result.error}`);
+                }
+            },
+        );
+    }
+
+    private async addLocalRepo(): Promise<void> {
+        const folders = await vscode.window.showOpenDialog({
+            canSelectFiles: false,
+            canSelectFolders: true,
+            canSelectMany: false,
+            title: 'Select a local Git repository',
+            openLabel: 'Select Repository',
+        });
+        if (!folders || folders.length === 0) { return; }
+
+        const localPath = folders[0].fsPath;
+        const name = await vscode.window.showInputBox({
+            prompt: 'Enter reference name',
+            placeHolder: localPath.split(/[\\/]/).pop() || 'my-repo',
+            ignoreFocusOut: true,
+        });
+        if (!name) { return; }
+
+        await vscode.window.withProgress(
+            { title: `Adding local repository: ${name}`, location: vscode.ProgressLocation.Notification },
+            async () => {
+                const result = await this.cli.addRepo(localPath, name, { local: true });
+                if (result.success) {
+                    vscode.window.showInformationMessage(`Local repository "${name}" added.`);
                     this.repoTree.refresh();
                     this.wikiTree.refresh();
                     this.statusBar.update();
