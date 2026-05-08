@@ -41,14 +41,10 @@ export class ReferenceCLI {
         const execCwd = cwdOverride ?? this.cwd();
         try {
             const { stdout, stderr } = await this.binary.exec(args, { cwd: execCwd });
-            if (stderr) {
-                this.outputChannel.appendLine(`[stderr] ${stderr}`);
-            }
-            return { success: true, data: stdout, rawOutput: stdout };
+            return { success: true, data: stdout || stderr, rawOutput: stdout };
         } catch (e: any) {
             const msg = e.message || String(e);
-            this.outputChannel.appendLine(`[error] ${args.join(' ')}: ${msg}`);
-            return { success: false, error: msg };
+            return { success: false, error: msg, rawOutput: msg };
         }
     }
 

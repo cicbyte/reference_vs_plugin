@@ -93,17 +93,22 @@ export class BinaryManager {
                 reject(new Error('reference binary not found'));
                 return;
             }
+            this.outputChannel.appendLine(`$ reference ${args.join(' ')} [cwd=${options?.cwd || 'default'}]`);
             execFile(
                 this.binaryPath,
                 args,
                 {
                     cwd: options?.cwd,
                     maxBuffer: 10 * 1024 * 1024,
-                    timeout: 120_000,
+                    timeout: 300_000,
+                    env: process.env,
                 },
                 (err, stdout, stderr) => {
+                    if (stdout) { this.outputChannel.appendLine(`[stdout] ${stdout.trimEnd()}`); }
+                    if (stderr) { this.outputChannel.appendLine(`[stderr] ${stderr.trimEnd()}`); }
                     if (err) {
-                        reject(err);
+                        const detail = stderr ? `${err.message}\n${stderr}` : err.message;
+                        reject(new Error(detail));
                     } else {
                         resolve({ stdout, stderr });
                     }
