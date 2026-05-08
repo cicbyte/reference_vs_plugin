@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ReferenceCLI } from '../services/cli';
 import { BinaryManager } from '../services/binaryManager';
 import { WorkspaceManager } from '../services/workspaceManager';
-import { RepoTreeProvider, WikiTreeProvider } from './treeView';
+import { RepoTreeProvider, WikiTreeProvider, ActionsTreeProvider } from './treeView';
 import { StatusBar } from './statusBar';
 
 export class CommandRegistrar {
@@ -13,9 +13,18 @@ export class CommandRegistrar {
         private ws: WorkspaceManager,
         private repoTree: RepoTreeProvider,
         private wikiTree: WikiTreeProvider,
+        private actionsTree: ActionsTreeProvider,
         private statusBar: StatusBar,
         private outputChannel: vscode.OutputChannel,
     ) {}
+
+    /** Refresh all tree views, status bar, and context variables. */
+    private refreshAll(): void {
+        this.repoTree.refresh();
+        this.wikiTree.refresh();
+        this.actionsTree.refresh();
+        this.statusBar.update();
+    }
 
     registerAll(context: vscode.ExtensionContext): void {
         const registrations: vscode.Disposable[] = [
@@ -132,9 +141,7 @@ export class CommandRegistrar {
                 const result = await this.cli.init(agentPick.agent);
                 if (result.success) {
                     vscode.window.showInformationMessage('Reference initialized successfully.');
-                    this.repoTree.refresh();
-                    this.wikiTree.refresh();
-                    this.statusBar.update();
+                    this.refreshAll();
                 } else {
                     vscode.window.showErrorMessage(`Initialization failed: ${result.error}`);
                 }
@@ -189,9 +196,7 @@ export class CommandRegistrar {
                 });
                 if (result.success) {
                     vscode.window.showInformationMessage('Repository added successfully.');
-                    this.repoTree.refresh();
-                    this.wikiTree.refresh();
-                    this.statusBar.update();
+                    this.refreshAll();
                 } else {
                     vscode.window.showErrorMessage(`Failed to add repository: ${result.error}`);
                 }
@@ -223,9 +228,7 @@ export class CommandRegistrar {
                 const result = await this.cli.addRepo(localPath, name, { local: true });
                 if (result.success) {
                     vscode.window.showInformationMessage(`Local repository "${name}" added.`);
-                    this.repoTree.refresh();
-                    this.wikiTree.refresh();
-                    this.statusBar.update();
+                    this.refreshAll();
                 } else {
                     vscode.window.showErrorMessage(`Failed to add repository: ${result.error}`);
                 }
@@ -258,9 +261,7 @@ export class CommandRegistrar {
         const result = await this.cli.removeRepo(repoName, mode.mode === 'purge');
         if (result.success) {
             vscode.window.showInformationMessage(`Repository "${repoName}" removed.`);
-            this.repoTree.refresh();
-            this.wikiTree.refresh();
-            this.statusBar.update();
+            this.refreshAll();
         } else {
             vscode.window.showErrorMessage(`Failed to remove: ${result.error}`);
         }
@@ -290,9 +291,7 @@ export class CommandRegistrar {
         const result = await this.cli.removeAllRepos(mode.mode === 'clean');
         if (result.success) {
             vscode.window.showInformationMessage('All repositories removed.');
-            this.repoTree.refresh();
-            this.wikiTree.refresh();
-            this.statusBar.update();
+            this.refreshAll();
         } else {
             vscode.window.showErrorMessage(`Failed to remove: ${result.error}`);
         }
@@ -310,8 +309,7 @@ export class CommandRegistrar {
                 const result = await this.cli.updateRepo(repoName);
                 if (result.success) {
                     vscode.window.showInformationMessage(`Repository "${repoName}" updated.`);
-                    this.repoTree.refresh();
-                    this.wikiTree.refresh();
+                    this.refreshAll();
                 } else {
                     vscode.window.showErrorMessage(`Failed to update: ${result.error}`);
                 }
@@ -328,8 +326,7 @@ export class CommandRegistrar {
                 const result = await this.cli.updateRepo();
                 if (result.success) {
                     vscode.window.showInformationMessage('All repositories updated.');
-                    this.repoTree.refresh();
-                    this.wikiTree.refresh();
+                    this.refreshAll();
                 } else {
                     vscode.window.showErrorMessage(`Update failed: ${result.error}`);
                 }

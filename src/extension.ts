@@ -56,7 +56,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(statusBar);
 
     // Commands
-    const commands = new CommandRegistrar(cli, binary, ws, repoTree, wikiTree, statusBar, outputChannel);
+    const commands = new CommandRegistrar(cli, binary, ws, repoTree, wikiTree, actionsTree, statusBar, outputChannel);
     commands.registerAll(context);
 
     // File watching
@@ -66,6 +66,7 @@ export async function activate(context: vscode.ExtensionContext) {
         ws.onDidChange(() => {
             repoTree.refresh();
             wikiTree.refresh();
+            actionsTree.refresh();
             statusBar.update();
             updateContexts(binary, ws);
         });

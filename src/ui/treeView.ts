@@ -240,17 +240,33 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionTreeIt
     }
 
     async getChildren(): Promise<ActionTreeItem[]> {
+        // --- Not initialized: only init + check ---
         if (!this.ws.isInitialized()) {
             return [
                 new ActionTreeItem('Initialize Workspace', 'reference.init', 'zap'),
                 new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
             ];
         }
+
+        const repos = this.ws.getAllRepos();
+        const hasRepos = repos.length > 0;
+
+        // --- Initialized, no repos ---
+        if (!hasRepos) {
+            return [
+                new ActionTreeItem('Add Repository', 'reference.addRepo', 'add'),
+                new ActionTreeItem('Remove Reference Config', 'reference.removeAllRepos', 'close-all'),
+                new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
+                new ActionTreeItem('Show Diagnostics', 'reference.diagnostics', 'output'),
+            ];
+        }
+
+        // --- Initialized, has repos ---
         return [
             new ActionTreeItem('Add Repository', 'reference.addRepo', 'add'),
+            new ActionTreeItem('Update All Repositories', 'reference.updateAllRepos', 'sync'),
             new ActionTreeItem('Remove Repository', 'reference.removeRepo', 'trash'),
             new ActionTreeItem('Remove All Repositories', 'reference.removeAllRepos', 'close-all'),
-            new ActionTreeItem('Update All Repositories', 'reference.updateAllRepos', 'sync'),
             new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
             new ActionTreeItem('Show Diagnostics', 'reference.diagnostics', 'output'),
             new ActionTreeItem('Open Cache Directory', 'reference.browseCache', 'folder-opened'),
