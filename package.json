@@ -84,6 +84,10 @@
         "title": "Reference: Update All Repositories"
       },
       {
+        "command": "reference.removeAllRepos",
+        "title": "Reference: Remove All Repositories"
+      },
+      {
         "command": "reference.analyze",
         "title": "Reference: Generate Architecture Overview"
       },

@@ -24,6 +24,7 @@ export class CommandRegistrar {
             // Repo management
             vscode.commands.registerCommand('reference.addRepo', () => this.addRepo()),
             vscode.commands.registerCommand('reference.removeRepo', (node?: any) => this.removeRepo(node)),
+            vscode.commands.registerCommand('reference.removeAllRepos', () => this.removeAllRepos()),
             vscode.commands.registerCommand('reference.updateRepo', (node?: any) => this.updateRepo(node)),
             vscode.commands.registerCommand('reference.updateAllRepos', () => this.updateAllRepos()),
             vscode.commands.registerCommand('reference.listRepos', () => this.listRepos()),
@@ -201,14 +202,14 @@ export class CommandRegistrar {
         const repoName = this.getRepoName(node) || await this.pickRepo('Select repository to remove');
         if (!repoName) { return; }
 
-        const purge = await vscode.window.showQuickPick(
+        const mode = await vscode.window.showQuickPick(
             [
-                { label: 'Remove reference only', description: 'Keep global cache', purge: false },
-                { label: 'Remove and purge cache', description: 'Also delete global cache', purge: true },
+                { label: 'Remove reference only', description: 'Keep global cache', mode: 'ref' as const },
+                { label: 'Remove and purge cache', description: 'Also delete global cache', mode: 'purge' as const },
             ],
             { placeHolder: `Remove "${repoName}"` },
         );
-        if (!purge) { return; }
+        if (!mode) { return; }
 
         const confirm = await vscode.window.showWarningMessage(
             `Are you sure you want to remove "${repoName}"?`,
@@ -217,9 +218,41 @@ export class CommandRegistrar {
         );
         if (confirm !== 'Remove') { return; }
 
-        const result = await this.cli.removeRepo(repoName, purge.purge);
+        const result = await this.cli.removeRepo(repoName, mode.mode === 'purge');
         if (result.success) {
             vscode.window.showInformationMessage(`Repository "${repoName}" removed.`);
+            this.repoTree.refresh();
+            this.wikiTree.refresh();
+            this.statusBar.update();
+        } else {
+            vscode.window.showErrorMessage(`Failed to remove: ${result.error}`);
+        }
+    }
+
+    private async removeAllRepos(): Promise<void> {
+        if (!this.requireBinary()) { return; }
+
+        const mode = await vscode.window.showQuickPick(
+            [
+                { label: 'Remove all references', description: 'Keep .reference directory', mode: 'all' as const },
+                { label: 'Remove all and clean', description: 'Also remove .reference dir and AI config', mode: 'clean' as const },
+            ],
+            { placeHolder: 'Remove all repositories from this project' },
+        );
+        if (!mode) { return; }
+
+        const confirm = await vscode.window.showWarningMessage(
+            mode.mode === 'clean'
+                ? 'Remove ALL repositories and clean .reference directory?'
+                : 'Remove ALL repositories from this project?',
+            { modal: true },
+            'Remove All',
+        );
+        if (confirm !== 'Remove All') { return; }
+
+        const result = await this.cli.removeAllRepos(mode.mode === 'clean');
+        if (result.success) {
+            vscode.window.showInformationMessage('All repositories removed.');
             this.repoTree.refresh();
             this.wikiTree.refresh();
             this.statusBar.update();

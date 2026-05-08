@@ -236,6 +236,8 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionTreeIt
     async getChildren(): Promise<ActionTreeItem[]> {
         return [
             new ActionTreeItem('Add Repository', 'reference.addRepo', 'add'),
+            new ActionTreeItem('Remove Repository', 'reference.removeRepo', 'trash'),
+            new ActionTreeItem('Remove All Repositories', 'reference.removeAllRepos', 'close-all'),
             new ActionTreeItem('Update All Repositories', 'reference.updateAllRepos', 'sync'),
             new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
             new ActionTreeItem('Show Diagnostics', 'reference.diagnostics', 'output'),

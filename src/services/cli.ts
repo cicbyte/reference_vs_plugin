@@ -75,6 +75,12 @@ export class ReferenceCLI {
         return this.runText(args);
     }
 
+    async removeAllRepos(clean?: boolean): Promise<CliResult<string>> {
+        const args = ['repo', 'remove', '--all', '--yes'];
+        if (clean) { args.push('--clean'); }
+        return this.runText(args);
+    }
+
     async updateRepo(identifier?: string): Promise<CliResult<string>> {
         const args = ['repo', 'update'];
         if (identifier) { args.push(identifier); }
