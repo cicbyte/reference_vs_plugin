@@ -9,6 +9,7 @@
     "url": "https://github.com/cicbyte/reference-vscode-plugin"
   },
   "license": "MIT",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
