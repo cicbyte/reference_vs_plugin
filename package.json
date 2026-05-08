@@ -135,6 +135,18 @@
         "title": "Reference: Show Diagnostics & Logs"
       },
       {
+        "command": "reference.doctor",
+        "title": "Reference: Run Doctor"
+      },
+      {
+        "command": "reference.wikiCommit",
+        "title": "Reference: Wiki Commit"
+      },
+      {
+        "command": "reference.wikiSync",
+        "title": "Reference: Wiki Sync"
+      },
+      {
         "command": "reference.checkBinary",
         "title": "Reference: Check CLI Installation"
       },

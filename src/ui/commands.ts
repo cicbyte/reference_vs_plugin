@@ -45,6 +45,9 @@ export class CommandRegistrar {
             vscode.commands.registerCommand('reference.viewStats', (node?: any) => this.viewStats(node)),
             vscode.commands.registerCommand('reference.browseCache', () => this.browseCache()),
             vscode.commands.registerCommand('reference.diagnostics', () => this.showDiagnostics()),
+            vscode.commands.registerCommand('reference.doctor', () => this.runDoctor()),
+            vscode.commands.registerCommand('reference.wikiCommit', () => this.wikiCommit()),
+            vscode.commands.registerCommand('reference.wikiSync', () => this.wikiSync()),
             // Navigation
             vscode.commands.registerCommand('reference.openWikiFile', (node?: any) => this.openWikiFile(node)),
             vscode.commands.registerCommand('reference.openRepoFolder', (node?: any) => this.openRepoFolder(node)),
@@ -436,6 +439,55 @@ export class CommandRegistrar {
         this.outputChannel.appendLine('\n─── Diagnostics ───');
         info.forEach(line => this.outputChannel.appendLine(line));
         this.outputChannel.appendLine('────────────────────\n');
+    }
+
+    private async runDoctor(): Promise<void> {
+        if (!this.requireBinary()) { return; }
+
+        await vscode.window.withProgress(
+            { title: 'Running reference doctor...', location: vscode.ProgressLocation.Notification },
+            async () => {
+                const result = await this.cli.runDoctor();
+                if (result.success) {
+                    this.outputChannel.show(true);
+                    this.outputChannel.appendLine('\n─── Doctor ───');
+                    this.outputChannel.appendLine(result.data || 'No issues found.');
+                    this.outputChannel.appendLine('──────────────\n');
+                    vscode.window.showInformationMessage('Doctor check complete. See output for details.');
+                } else {
+                    vscode.window.showErrorMessage(`Doctor failed: ${result.error}`);
+                }
+            },
+        );
+    }
+
+    private async wikiCommit(): Promise<void> {
+        if (!this.requireBinary()) { return; }
+
+        const result = await this.cli.wikiCommit();
+        if (result.success) {
+            vscode.window.showInformationMessage('Wiki changes committed.');
+            this.refreshAll();
+        } else {
+            vscode.window.showErrorMessage(`Wiki commit failed: ${result.error}`);
+        }
+    }
+
+    private async wikiSync(): Promise<void> {
+        if (!this.requireBinary()) { return; }
+
+        await vscode.window.withProgress(
+            { title: 'Syncing wiki...', location: vscode.ProgressLocation.Notification },
+            async () => {
+                const result = await this.cli.wikiSync();
+                if (result.success) {
+                    vscode.window.showInformationMessage('Wiki synced.');
+                    this.refreshAll();
+                } else {
+                    vscode.window.showErrorMessage(`Wiki sync failed: ${result.error}`);
+                }
+            },
+        );
     }
 
     // ─── Navigation ──────────────────────────────────────────

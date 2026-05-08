@@ -114,4 +114,12 @@ export class ReferenceCLI {
         return this.runText(['doctor']);
     }
 
+    async wikiCommit(): Promise<CliResult<string>> {
+        return this.runText(['wiki', 'commit']);
+    }
+
+    async wikiSync(): Promise<CliResult<string>> {
+        return this.runText(['wiki', 'sync']);
+    }
+
 }

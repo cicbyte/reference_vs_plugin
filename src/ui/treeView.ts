@@ -99,6 +99,19 @@ class ActionTreeItem extends BaseTreeItem {
     }
 }
 
+class ActionGroupItem extends BaseTreeItem {
+    readonly kind = 'actionGroup';
+    constructor(
+        label: string,
+        public readonly children: ActionTreeItem[],
+        icon: string,
+    ) {
+        super(label, vscode.TreeItemCollapsibleState.Expanded);
+        this.contextValue = 'actionGroup';
+        this.iconPath = new vscode.ThemeIcon(icon);
+    }
+}
+
 // ─── Helper: list directory children ─────────────────────────────
 
 const IGNORED_ENTRIES = new Set(['.git', 'node_modules', '.DS_Store', 'Thumbs.db']);
@@ -225,8 +238,8 @@ export class WikiTreeProvider implements vscode.TreeDataProvider<BaseTreeItem> {
 
 // ─── Actions Tree Provider ───────────────────────────────────────
 
-export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionTreeItem> {
-    private _onDidChangeTree = new vscode.EventEmitter<ActionTreeItem | undefined | null>();
+export class ActionsTreeProvider implements vscode.TreeDataProvider<BaseTreeItem> {
+    private _onDidChangeTree = new vscode.EventEmitter<BaseTreeItem | undefined | null>();
     readonly onDidChangeTreeData = this._onDidChangeTree.event;
 
     constructor(private ws: WorkspaceManager) {}
@@ -235,13 +248,13 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionTreeIt
         this._onDidChangeTree.fire(undefined);
     }
 
-    getTreeItem(element: ActionTreeItem): vscode.TreeItem {
+    getTreeItem(element: BaseTreeItem): vscode.TreeItem {
         return element;
     }
 
-    async getChildren(): Promise<ActionTreeItem[]> {
-        // --- Not initialized: only init + check ---
+    async getChildren(element?: BaseTreeItem): Promise<BaseTreeItem[]> {
         if (!this.ws.isInitialized()) {
+            if (element) { return []; }
             return [
                 new ActionTreeItem('Initialize Workspace', 'reference.init', 'zap'),
                 new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
@@ -251,25 +264,41 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<ActionTreeIt
         const repos = this.ws.getAllRepos();
         const hasRepos = repos.length > 0;
 
-        // --- Initialized, no repos ---
-        if (!hasRepos) {
-            return [
+        // Root level: return groups
+        if (!element) {
+            const groups: BaseTreeItem[] = [];
+
+            const repoActions = [
                 new ActionTreeItem('Add Repository', 'reference.addRepo', 'add'),
-                new ActionTreeItem('Remove Reference Config', 'reference.removeAllRepos', 'close-all'),
-                new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
-                new ActionTreeItem('Show Diagnostics', 'reference.diagnostics', 'output'),
             ];
+            if (hasRepos) {
+                repoActions.push(
+                    new ActionTreeItem('Update All Repositories', 'reference.updateAllRepos', 'sync'),
+                    new ActionTreeItem('Remove Repository', 'reference.removeRepo', 'trash'),
+                );
+            }
+            repoActions.push(
+                new ActionTreeItem('Remove Reference Config', 'reference.removeAllRepos', 'close-all'),
+            );
+            groups.push(new ActionGroupItem('Repository', repoActions, 'repo'));
+
+            groups.push(new ActionGroupItem('Tools', [
+                new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
+                new ActionTreeItem('Run Doctor', 'reference.doctor', 'heart'),
+                new ActionTreeItem('Wiki Commit', 'reference.wikiCommit', 'check'),
+                new ActionTreeItem('Wiki Sync', 'reference.wikiSync', 'cloud-upload'),
+                new ActionTreeItem('Show Diagnostics', 'reference.diagnostics', 'output'),
+                new ActionTreeItem('Open Cache Directory', 'reference.browseCache', 'folder-opened'),
+            ], 'tools'));
+
+            return groups;
         }
 
-        // --- Initialized, has repos ---
-        return [
-            new ActionTreeItem('Add Repository', 'reference.addRepo', 'add'),
-            new ActionTreeItem('Update All Repositories', 'reference.updateAllRepos', 'sync'),
-            new ActionTreeItem('Remove Repository', 'reference.removeRepo', 'trash'),
-            new ActionTreeItem('Remove All Repositories', 'reference.removeAllRepos', 'close-all'),
-            new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
-            new ActionTreeItem('Show Diagnostics', 'reference.diagnostics', 'output'),
-            new ActionTreeItem('Open Cache Directory', 'reference.browseCache', 'folder-opened'),
-        ];
+        // Expand group: return children
+        if (element instanceof ActionGroupItem) {
+            return element.children;
+        }
+
+        return [];
     }
 }
