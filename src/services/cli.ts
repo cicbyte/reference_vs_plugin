@@ -39,8 +39,12 @@ export class ReferenceCLI {
 
     private async runText(args: string[], cwdOverride?: string): Promise<CliResult<string>> {
         const execCwd = cwdOverride ?? this.cwd();
+        this.outputChannel.appendLine(`[runText] cwd=${execCwd}`);
         try {
             const { stdout, stderr } = await this.binary.exec(args, { cwd: execCwd });
+            if (stderr && !stdout) {
+                this.outputChannel.appendLine(`[runText] Warning: empty stdout, stderr has content`);
+            }
             return { success: true, data: stdout || stderr, rawOutput: stdout };
         } catch (e: any) {
             const msg = e.message || String(e);

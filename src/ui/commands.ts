@@ -198,8 +198,20 @@ export class CommandRegistrar {
                     branch: branch || undefined,
                 });
                 if (result.success) {
-                    vscode.window.showInformationMessage('Repository added successfully.');
+                    this.outputChannel.appendLine(`[addRepo] CLI output: ${result.rawOutput || result.data}`);
                     this.refreshAll();
+                    // Verify the repo actually appears in the map
+                    const repos = this.ws.getAllRepos();
+                    const found = repos.some(r => url.includes(r.ref_name) || r.full_name?.includes(url));
+                    if (repos.length === 0 && !found) {
+                        vscode.window.showWarningMessage(
+                            `CLI reported success but repo not found in map file. Check Output → Reference for details.`,
+                        );
+                    } else {
+                        vscode.window.showInformationMessage(
+                            `Repository added. ${result.rawOutput?.trim() || ''}`,
+                        );
+                    }
                 } else {
                     vscode.window.showErrorMessage(`Failed to add repository: ${result.error}`);
                 }
@@ -230,8 +242,17 @@ export class CommandRegistrar {
             async () => {
                 const result = await this.cli.addRepo(localPath, name, { local: true });
                 if (result.success) {
-                    vscode.window.showInformationMessage(`Local repository "${name}" added.`);
+                    this.outputChannel.appendLine(`[addRepo] CLI output: ${result.rawOutput || result.data}`);
                     this.refreshAll();
+                    const repos = this.ws.getAllRepos();
+                    const found = repos.some(r => r.ref_name === name);
+                    if (!found) {
+                        vscode.window.showWarningMessage(
+                            `CLI reported success but "${name}" not found in map file. Check Output → Reference for details.`,
+                        );
+                    } else {
+                        vscode.window.showInformationMessage(`Local repository "${name}" added.`);
+                    }
                 } else {
                     vscode.window.showErrorMessage(`Failed to add repository: ${result.error}`);
                 }
