@@ -106,3 +106,4 @@ dist/
 node_modules/
 .claude
 CLAUDE.md
+.version
