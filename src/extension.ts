@@ -14,8 +14,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Services
     const binary = new BinaryManager(outputChannel);
-    const cli = new ReferenceCLI(binary, outputChannel);
     const ws = new WorkspaceManager(outputChannel);
+    const cli = new ReferenceCLI(binary, ws, outputChannel);
 
     // Detect binary
     await binary.detect();

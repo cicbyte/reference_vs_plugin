@@ -269,7 +269,7 @@ export class CommandRegistrar {
 
     private async listRepos(): Promise<void> {
         if (!this.requireBinary()) { return; }
-        const result = await this.cli.listRepos(this.ws.getWorkspaceRoot());
+        const result = await this.cli.listRepos();
         if (result.success && result.data) {
             const items = result.data.map(r => ({
                 label: r.name,

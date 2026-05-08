@@ -1,16 +1,23 @@
 import * as vscode from 'vscode';
 import { BinaryManager } from './binaryManager';
 import { RepoEntry, SccEntry, GlobalStats, CliResult } from '../types';
+import { WorkspaceManager } from './workspaceManager';
 
 export class ReferenceCLI {
     constructor(
         private binary: BinaryManager,
+        private ws: WorkspaceManager,
         private outputChannel: vscode.OutputChannel,
     ) {}
 
-    private async runJson<T>(args: string[], cwd?: string): Promise<CliResult<T>> {
+    private cwd(): string | undefined {
+        return this.ws.getWorkspaceRoot();
+    }
+
+    private async runJson<T>(args: string[], cwdOverride?: string): Promise<CliResult<T>> {
+        const execCwd = cwdOverride ?? this.cwd();
         try {
-            const { stdout, stderr } = await this.binary.exec([...args, '-f', 'jsonl'], { cwd });
+            const { stdout, stderr } = await this.binary.exec([...args, '-f', 'jsonl'], { cwd: execCwd });
             if (stderr) {
                 this.outputChannel.appendLine(`[stderr] ${stderr}`);
             }
@@ -30,9 +37,10 @@ export class ReferenceCLI {
         }
     }
 
-    private async runText(args: string[], cwd?: string): Promise<CliResult<string>> {
+    private async runText(args: string[], cwdOverride?: string): Promise<CliResult<string>> {
+        const execCwd = cwdOverride ?? this.cwd();
         try {
-            const { stdout, stderr } = await this.binary.exec(args, { cwd });
+            const { stdout, stderr } = await this.binary.exec(args, { cwd: execCwd });
             if (stderr) {
                 this.outputChannel.appendLine(`[stderr] ${stderr}`);
             }
@@ -44,8 +52,8 @@ export class ReferenceCLI {
         }
     }
 
-    async listRepos(cwd?: string): Promise<CliResult<RepoEntry[]>> {
-        const result = await this.runJson<RepoEntry[]>(['repo', 'list'], cwd);
+    async listRepos(): Promise<CliResult<RepoEntry[]>> {
+        const result = await this.runJson<RepoEntry[]>(['repo', 'list']);
         if (result.success && result.data) {
             // Single repo comes as object, multiple as array
             if (!Array.isArray(result.data)) {
@@ -71,10 +79,10 @@ export class ReferenceCLI {
         return this.runText(args);
     }
 
-    async updateRepo(identifier?: string, cwd?: string): Promise<CliResult<string>> {
+    async updateRepo(identifier?: string): Promise<CliResult<string>> {
         const args = ['repo', 'update'];
         if (identifier) { args.push(identifier); }
-        return this.runText(args, cwd);
+        return this.runText(args);
     }
 
     async getStats(repoName?: string): Promise<CliResult<SccEntry[]>> {
