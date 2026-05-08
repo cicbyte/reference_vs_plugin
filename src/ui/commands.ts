@@ -114,10 +114,22 @@ export class CommandRegistrar {
             return;
         }
 
+        const agentPick = await vscode.window.showQuickPick(
+            [
+                { label: '$(sparkle) Claude Code', description: 'Inject Claude Code agent configs (SKILL.md, agents)', agent: 'claude' },
+                { label: '$(circle-slash) None', description: 'Repository management only, no AI agent integration', agent: 'none' },
+            ],
+            {
+                placeHolder: 'Select your AI coding assistant',
+                title: 'Reference — Choose Agent',
+            },
+        );
+        if (!agentPick) { return; }
+
         await vscode.window.withProgress(
-            { title: 'Initializing Reference...', location: vscode.ProgressLocation.Notification },
+            { title: `Initializing Reference (agent: ${agentPick.agent})...`, location: vscode.ProgressLocation.Notification },
             async () => {
-                const result = await this.cli.init();
+                const result = await this.cli.init(agentPick.agent);
                 if (result.success) {
                     vscode.window.showInformationMessage('Reference initialized successfully.');
                     this.repoTree.refresh();

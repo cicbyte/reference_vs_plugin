@@ -97,8 +97,9 @@ export class ReferenceCLI {
         return result as CliResult<SccEntry[]>;
     }
 
-    async init(): Promise<CliResult<string>> {
-        return this.runText([]);
+    async init(agent: string = 'none'): Promise<CliResult<string>> {
+        const args = ['init', '--agent', agent];
+        return this.runText(args);
     }
 
     async getGlobalStats(): Promise<CliResult<GlobalStats>> {

@@ -4,6 +4,10 @@
   "description": "Graphical frontend for the reference CLI tool. Manage code repository references and knowledge files directly in VS Code.",
   "version": "0.1.0",
   "publisher": "cicbyte",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cicbyte/reference-vscode-plugin"
+  },
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
