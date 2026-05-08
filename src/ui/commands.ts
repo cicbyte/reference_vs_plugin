@@ -67,7 +67,7 @@ export class CommandRegistrar {
     }
 
     private async pickRepo(prompt: string): Promise<string | undefined> {
-        const mapEntries = this.ws.readMapFile();
+        const mapEntries = this.ws.getAllRepos();
         if (mapEntries.length === 0) {
             vscode.window.showInformationMessage('No repositories referenced yet.');
             return undefined;
@@ -280,7 +280,7 @@ export class CommandRegistrar {
                 placeHolder: 'Referenced repositories',
             });
             if (picked) {
-                const mapEntry = this.ws.readMapFile().find(e => e.ref_name === picked.label);
+                const mapEntry = this.ws.getAllRepos().find(e => e.ref_name === picked.label);
                 if (mapEntry) {
                     const wikiPath = path.resolve(this.ws.getWorkspaceRoot()!, mapEntry.wiki_path);
                     vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(wikiPath));
@@ -360,7 +360,7 @@ export class CommandRegistrar {
             `Binary: ${this.binary.getBinaryPath() || 'not found'}`,
             `Workspace: ${this.ws.getWorkspaceRoot() || 'none'}`,
             `.reference dir: ${this.ws.getReferenceDir() || 'none'}`,
-            `Repos: ${this.ws.readMapFile().map(e => e.ref_name).join(', ') || 'none'}`,
+            `Repos: ${this.ws.getAllRepos().map(e => e.ref_name).join(', ') || 'none'}`,
         ];
         this.outputChannel.appendLine('\n─── Diagnostics ───');
         info.forEach(line => this.outputChannel.appendLine(line));

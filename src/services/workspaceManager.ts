@@ -48,6 +48,40 @@ export class WorkspaceManager {
         }
     }
 
+    /** Merge map file entries with repos dir scan to catch missing map entries. */
+    getAllRepos(): MapEntry[] {
+        const mapEntries = this.readMapFile();
+        const mapNames = new Set(mapEntries.map(e => e.ref_name));
+        const reposDir = this.getReposDir();
+        if (!reposDir || !fs.existsSync(reposDir)) { return mapEntries; }
+
+        // Scan repos dir for directories not in the map file
+        let extra: MapEntry[] = [];
+        try {
+            const dirs = fs.readdirSync(reposDir)
+                .filter(name => {
+                    try { return fs.statSync(path.join(reposDir, name)).isDirectory(); }
+                    catch { return false; }
+                });
+            for (const name of dirs) {
+                if (mapNames.has(name)) { continue; }
+                extra.push({
+                    ref_name: name,
+                    type: 'local',
+                    platform: '',
+                    full_name: name,
+                    description: '',
+                    repo_path: `.reference${path.sep}repos${path.sep}${name}`,
+                    wiki_path: `.reference${path.sep}wiki${path.sep}${name}`,
+                    commit: '',
+                    topics: [],
+                });
+            }
+        } catch { /* ignore */ }
+
+        return [...mapEntries, ...extra];
+    }
+
     getWikiFiles(repoName: string): string[] {
         const wikiDir = this.getWikiDir();
         if (!wikiDir) { return []; }

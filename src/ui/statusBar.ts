@@ -33,7 +33,7 @@ export class StatusBar {
         }
 
         vscode.commands.executeCommand('setContext', 'reference:hasBinary', true);
-        const repos = this.ws.readMapFile();
+        const repos = this.ws.getAllRepos();
         const count = repos.length;
         this.item.text = `$(book) reference: ${count} repo${count !== 1 ? 's' : ''}`;
         this.item.tooltip = `${count} referenced repos. Click to list.`;

@@ -147,7 +147,7 @@ export class RepoTreeProvider implements vscode.TreeDataProvider<BaseTreeItem> {
         if (!this.ws.getWorkspaceRoot()) { return []; }
 
         if (!element) {
-            const mapEntries = this.ws.readMapFile();
+            const mapEntries = this.ws.getAllRepos();
             if (mapEntries.length === 0) { return []; }
             const reposDir = this.ws.getReposDir();
             return mapEntries
@@ -198,7 +198,7 @@ export class WikiTreeProvider implements vscode.TreeDataProvider<BaseTreeItem> {
         if (!this.ws.getWorkspaceRoot()) { return []; }
 
         if (!element) {
-            const mapEntries = this.ws.readMapFile();
+            const mapEntries = this.ws.getAllRepos();
             const groups: BaseTreeItem[] = [];
             for (const entry of mapEntries) {
                 const files = this.ws.getWikiFiles(entry.ref_name);
