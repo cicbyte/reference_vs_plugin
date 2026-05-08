@@ -1,0 +1,16 @@
+.vscode/**
+.vscode-test/**
+src/**
+node_modules/**
+.gitignore
+tsconfig.json
+package-lock.json
+**/*.ts
+**/*.map
+.claude/**
+.reference/**
+features.json
+claude-progress.txt
+CLAUDE.md
+需求.md
+media/**

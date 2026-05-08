@@ -101,5 +101,8 @@ typings/
 
 
 .reference/
+dist/
+*.vsix
+node_modules/
 .claude
 CLAUDE.md

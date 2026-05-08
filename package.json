@@ -1,0 +1,213 @@
+{
+  "name": "reference-vscode-plugin",
+  "displayName": "Reference - Code Knowledge Manager",
+  "description": "Graphical frontend for the reference CLI tool. Manage code repository references and knowledge files directly in VS Code.",
+  "version": "0.1.0",
+  "publisher": "cicbyte",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "reference",
+    "code knowledge",
+    "repository manager",
+    "AI coding"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "reference",
+          "title": "Reference",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "reference": [
+        {
+          "id": "reference.repos",
+          "name": "Referenced Repositories",
+          "icon": "media/icon.svg"
+        },
+        {
+          "id": "reference.wiki",
+          "name": "Knowledge Files",
+          "icon": "media/icon.svg"
+        },
+        {
+          "id": "reference.actions",
+          "name": "Quick Actions",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "reference.repos",
+        "contents": "No repositories referenced yet.\n[Add Repository](command:reference.addRepo)\n\nMake sure the `reference` CLI is installed. [Check Installation](command:reference.checkBinary)",
+        "when": "reference:hasBinary"
+      },
+      {
+        "view": "reference.repos",
+        "contents": "Reference CLI not found.\n[Install / Configure](command:reference.checkBinary)",
+        "when": "!reference:hasBinary"
+      }
+    ],
+    "commands": [
+      {
+        "command": "reference.addRepo",
+        "title": "Reference: Add Repository",
+        "icon": "$(add)"
+      },
+      {
+        "command": "reference.removeRepo",
+        "title": "Reference: Remove Repository",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "reference.updateRepo",
+        "title": "Reference: Update Repository",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "reference.updateAllRepos",
+        "title": "Reference: Update All Repositories"
+      },
+      {
+        "command": "reference.analyze",
+        "title": "Reference: Generate Architecture Overview"
+      },
+      {
+        "command": "reference.explore",
+        "title": "Reference: Explore Topic"
+      },
+      {
+        "command": "reference.listRepos",
+        "title": "Reference: List Referenced Repositories"
+      },
+      {
+        "command": "reference.viewStats",
+        "title": "Reference: Show Code Statistics"
+      },
+      {
+        "command": "reference.browseCache",
+        "title": "Reference: Open Global Cache Directory"
+      },
+      {
+        "command": "reference.diagnostics",
+        "title": "Reference: Show Diagnostics & Logs"
+      },
+      {
+        "command": "reference.checkBinary",
+        "title": "Reference: Check CLI Installation"
+      },
+      {
+        "command": "reference.refreshRepos",
+        "title": "Reference: Refresh Repository List",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "reference.refreshWiki",
+        "title": "Reference: Refresh Knowledge Files",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "reference.openWikiFile",
+        "title": "Reference: Open Knowledge File"
+      },
+      {
+        "command": "reference.openRepoFolder",
+        "title": "Reference: Open Repository Folder"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "reference.addRepo",
+          "when": "view == reference.repos",
+          "group": "navigation"
+        },
+        {
+          "command": "reference.refreshRepos",
+          "when": "view == reference.repos",
+          "group": "navigation"
+        },
+        {
+          "command": "reference.refreshWiki",
+          "when": "view == reference.wiki",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "reference.updateRepo",
+          "when": "view == reference.repos && viewItem == repo",
+          "group": "inline"
+        },
+        {
+          "command": "reference.removeRepo",
+          "when": "view == reference.repos && viewItem == repo",
+          "group": "inline"
+        },
+        {
+          "command": "reference.viewStats",
+          "when": "view == reference.repos && viewItem == repo"
+        },
+        {
+          "command": "reference.analyze",
+          "when": "view == reference.repos && viewItem == repo"
+        },
+        {
+          "command": "reference.explore",
+          "when": "view == reference.repos && viewItem == repo"
+        },
+        {
+          "command": "reference.openRepoFolder",
+          "when": "view == reference.repos && viewItem == repo"
+        },
+        {
+          "command": "reference.openWikiFile",
+          "when": "view == reference.wiki && viewItem == wikiFile"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Reference",
+      "properties": {
+        "reference.binaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the reference binary. Leave empty to auto-detect from PATH."
+        },
+        "reference.autoRefresh": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically refresh tree views when .reference/ directory changes."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --minify",
+    "watch": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --format=cjs --platform=node --sourcemap --watch",
+    "lint": "tsc --noEmit",
+    "package": "npx @vscode/vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.4.0"
+  }
+}
