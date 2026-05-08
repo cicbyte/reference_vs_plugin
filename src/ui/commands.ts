@@ -270,27 +270,31 @@ export class CommandRegistrar {
     private async removeAllRepos(): Promise<void> {
         if (!this.requireBinary()) { return; }
 
+        const hasRepos = this.ws.getAllRepos().length > 0;
+
         const mode = await vscode.window.showQuickPick(
             [
                 { label: 'Remove all references', description: 'Keep .reference directory', mode: 'all' as const },
                 { label: 'Remove all and clean', description: 'Also remove .reference dir and AI config', mode: 'clean' as const },
             ],
-            { placeHolder: 'Remove all repositories from this project' },
+            { placeHolder: hasRepos ? 'Remove all repositories from this project' : 'Remove Reference configuration from this project' },
         );
         if (!mode) { return; }
 
         const confirm = await vscode.window.showWarningMessage(
             mode.mode === 'clean'
-                ? 'Remove ALL repositories and clean .reference directory?'
-                : 'Remove ALL repositories from this project?',
+                ? 'Remove all Reference data and clean .reference directory?'
+                : hasRepos
+                    ? 'Remove ALL repositories from this project?'
+                    : 'Remove Reference configuration?',
             { modal: true },
-            'Remove All',
+            'Remove',
         );
-        if (confirm !== 'Remove All') { return; }
+        if (confirm !== 'Remove') { return; }
 
         const result = await this.cli.removeAllRepos(mode.mode === 'clean');
         if (result.success) {
-            vscode.window.showInformationMessage('All repositories removed.');
+            vscode.window.showInformationMessage('Reference data removed.');
             this.refreshAll();
         } else {
             vscode.window.showErrorMessage(`Failed to remove: ${result.error}`);
