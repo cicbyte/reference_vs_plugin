@@ -25,7 +25,7 @@ This extension is a graphical frontend for the [reference](https://github.com/ci
 
 ```bash
 # Go install
-go install github.com/cicbyte/reference/cmd/proxy@latest
+go install github.com/cicbyte/reference@latest
 
 # Or manually download the binary and add to PATH
 ```

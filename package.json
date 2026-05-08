@@ -104,10 +104,6 @@
         "title": "Reference: Initialize Workspace"
       },
       {
-        "command": "reference.updateAllRepos",
-        "title": "Reference: Update All Repositories"
-      },
-      {
         "command": "reference.removeAllRepos",
         "title": "Reference: Remove All Repositories"
       },
@@ -126,10 +122,6 @@
       {
         "command": "reference.viewStats",
         "title": "Reference: Show Code Statistics"
-      },
-      {
-        "command": "reference.browseCache",
-        "title": "Reference: Open Global Cache Directory"
       },
       {
         "command": "reference.diagnostics",

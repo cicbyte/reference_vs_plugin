@@ -7,6 +7,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![VS Code: ^1.85.0](https://img.shields.io/badge/VS%20Code-^1.85.0-007ACC?logo=visualstudiocode)](https://code.visualstudio.com/)
 
+![Main Interface](images/main-interface.png)
+
 ## 功能特性
 
 - **仓库引用管理** — 通过图形界面添加（远程/本地）、更新、移除 Git 仓库引用，无需终端操作
@@ -23,7 +25,7 @@
 
 ```bash
 # Go install
-go install github.com/cicbyte/reference/cmd/proxy@latest
+go install github.com/cicbyte/reference@latest
 
 # 或手动下载 binary 加入 PATH
 ```
@@ -58,6 +60,8 @@ npm run build
 ### 初始化
 
 首次在项目中使用时，点击侧栏 Reference 图标，点击 **Initialize Now** 完成工作区初始化。
+
+![Initialize](images/initialize.png)
 
 ### 添加仓库
 

@@ -36,14 +36,12 @@ export class CommandRegistrar {
             vscode.commands.registerCommand('reference.removeRepo', (node?: any) => this.removeRepo(node)),
             vscode.commands.registerCommand('reference.removeAllRepos', () => this.removeAllRepos()),
             vscode.commands.registerCommand('reference.updateRepo', (node?: any) => this.updateRepo(node)),
-            vscode.commands.registerCommand('reference.updateAllRepos', () => this.updateAllRepos()),
             vscode.commands.registerCommand('reference.listRepos', () => this.listRepos()),
             // Knowledge
             vscode.commands.registerCommand('reference.analyze', (node?: any) => this.analyze(node)),
             vscode.commands.registerCommand('reference.explore', (node?: any) => this.explore(node)),
             // Stats & Diagnostics
             vscode.commands.registerCommand('reference.viewStats', (node?: any) => this.viewStats(node)),
-            vscode.commands.registerCommand('reference.browseCache', () => this.browseCache()),
             vscode.commands.registerCommand('reference.diagnostics', () => this.showDiagnostics()),
             vscode.commands.registerCommand('reference.doctor', () => this.runDoctor()),
             vscode.commands.registerCommand('reference.wikiCommit', () => this.wikiCommit()),
@@ -345,23 +343,6 @@ export class CommandRegistrar {
         );
     }
 
-    private async updateAllRepos(): Promise<void> {
-        if (!this.requireBinary()) { return; }
-
-        await vscode.window.withProgress(
-            { title: 'Updating all repositories...', location: vscode.ProgressLocation.Notification },
-            async () => {
-                const result = await this.cli.updateRepo();
-                if (result.success) {
-                    vscode.window.showInformationMessage('All repositories updated.');
-                    this.refreshAll();
-                } else {
-                    vscode.window.showErrorMessage(`Update failed: ${result.error}`);
-                }
-            },
-        );
-    }
-
     private async listRepos(): Promise<void> {
         if (!this.requireBinary()) { return; }
         const result = await this.cli.listRepos();
@@ -437,16 +418,6 @@ export class CommandRegistrar {
         );
 
         panel.webview.html = this.renderStatsHtml(repoName, result.data);
-    }
-
-    private async browseCache(): Promise<void> {
-        const home = process.env.USERPROFILE || process.env.HOME || '';
-        const cachePath = path.join(home, '.cicbyte', 'reference');
-        if (require('fs').existsSync(cachePath)) {
-            vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(cachePath));
-        } else {
-            vscode.window.showWarningMessage(`Cache directory not found: ${cachePath}`);
-        }
     }
 
     private showDiagnostics(): void {

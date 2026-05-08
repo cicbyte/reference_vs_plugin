@@ -273,7 +273,6 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<BaseTreeItem
             ];
             if (hasRepos) {
                 repoActions.push(
-                    new ActionTreeItem('Update All Repositories', 'reference.updateAllRepos', 'sync'),
                     new ActionTreeItem('Remove Repository', 'reference.removeRepo', 'trash'),
                 );
             }
@@ -288,7 +287,6 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<BaseTreeItem
                 new ActionTreeItem('Wiki Commit', 'reference.wikiCommit', 'check'),
                 new ActionTreeItem('Wiki Sync', 'reference.wikiSync', 'cloud-upload'),
                 new ActionTreeItem('Show Diagnostics', 'reference.diagnostics', 'output'),
-                new ActionTreeItem('Open Cache Directory', 'reference.browseCache', 'folder-opened'),
             ], 'tools'));
 
             return groups;
