@@ -63,12 +63,12 @@ export class ReferenceCLI {
         return result as CliResult<RepoEntry[]>;
     }
 
-    async addRepo(url: string, name?: string, options?: { branch?: string; depth?: number; local?: boolean }): Promise<CliResult<string>> {
+    async addRepo(url: string, name?: string, options?: { branch?: string; update?: boolean; local?: boolean }): Promise<CliResult<string>> {
         const args = ['repo', 'add'];
         if (options?.local) { args.push('--local'); }
         if (name) { args.push('--name', name); }
         if (options?.branch) { args.push('--branch', options.branch); }
-        if (options?.depth !== undefined) { args.push('--depth', String(options.depth)); }
+        if (options?.update) { args.push('--update'); }
         args.push(url);
         return this.runText(args);
     }

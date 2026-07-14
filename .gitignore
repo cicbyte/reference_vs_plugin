@@ -107,3 +107,6 @@ node_modules/
 .claude
 CLAUDE.md
 .version
+.zcode/
+AGENTS.md
+dev-docs/

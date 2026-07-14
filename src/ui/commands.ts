@@ -192,7 +192,7 @@ export class CommandRegistrar {
             { title: `Adding remote repository: ${url}`, location: vscode.ProgressLocation.Notification, cancellable: true },
             async () => {
                 const result = await this.cli.addRepo(url, name || undefined, {
-                    depth: 1,
+                    update: true,
                     branch: branch || undefined,
                 });
                 if (result.success) {
