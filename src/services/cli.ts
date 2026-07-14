@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BinaryManager } from './binaryManager';
-import { RepoEntry, SccEntry, GlobalStats, DoctorResult, CliResult } from '../types';
+import { RepoEntry, SccEntry, GlobalStats, DoctorResult, GlobalDoctorResult, CliResult } from '../types';
 import { WorkspaceManager } from './workspaceManager';
 
 export class ReferenceCLI {
@@ -142,6 +142,43 @@ export class ReferenceCLI {
     /** Structured doctor result via `-f json` (project_dir + checks[] + summary). */
     async runDoctorStructured(): Promise<CliResult<DoctorResult>> {
         return this.runJsonObject<DoctorResult>(['doctor']);
+    }
+
+    /** Global cross-project health check via `-f json`. */
+    async runGlobalDoctor(options?: { issuesOnly?: boolean; concurrency?: number }): Promise<CliResult<GlobalDoctorResult>> {
+        const args = ['global', 'doctor', '-f', 'json'];
+        if (options?.issuesOnly) { args.push('--issues-only'); }
+        if (options?.concurrency) { args.push('--concurrency', String(options.concurrency)); }
+        const execCwd = this.cwd();
+        try {
+            const { stdout, stderr } = await this.binary.exec(args, { cwd: execCwd });
+            if (stderr) {
+                this.outputChannel.appendLine(`[stderr] ${stderr}`);
+            }
+            const trimmed = stdout.trim();
+            if (!trimmed) {
+                return { success: true, data: undefined as unknown as GlobalDoctorResult };
+            }
+            return { success: true, data: JSON.parse(trimmed) as GlobalDoctorResult };
+        } catch (e: any) {
+            const msg = e.message || String(e);
+            this.outputChannel.appendLine(`[error] ${args.join(' ')}: ${msg}`);
+            return { success: false, error: msg };
+        }
+    }
+
+    /** Global GC preview (dry-run). CLI has no JSON mode for gc, so output is text. */
+    async runGlobalGcPreview(cleanCache = false): Promise<CliResult<string>> {
+        const args = ['global', 'gc', '--dry-run'];
+        if (cleanCache) { args.push('--cache'); }
+        return this.runText(args);
+    }
+
+    /** Global GC execute. Pass --yes to skip CLI's interactive prompt. */
+    async runGlobalGcExecute(cleanCache = false): Promise<CliResult<string>> {
+        const args = ['global', 'gc', '--yes'];
+        if (cleanCache) { args.push('--cache'); }
+        return this.runText(args);
     }
 
     async wikiCommit(local = false): Promise<CliResult<string>> {

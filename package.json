@@ -132,6 +132,14 @@
         "title": "Reference: Run Doctor"
       },
       {
+        "command": "reference.globalDoctor",
+        "title": "Reference: Global Health Check"
+      },
+      {
+        "command": "reference.globalGc",
+        "title": "Reference: Clean Up Unused References & Cache"
+      },
+      {
         "command": "reference.wikiCommit",
         "title": "Reference: Wiki Commit"
       },

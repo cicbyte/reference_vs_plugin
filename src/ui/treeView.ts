@@ -284,6 +284,8 @@ export class ActionsTreeProvider implements vscode.TreeDataProvider<BaseTreeItem
             groups.push(new ActionGroupItem('Tools', [
                 new ActionTreeItem('Check Installation', 'reference.checkBinary', 'eye'),
                 new ActionTreeItem('Run Doctor', 'reference.doctor', 'heart'),
+                new ActionTreeItem('Global Health Check', 'reference.globalDoctor', 'organization'),
+                new ActionTreeItem('Clean Up Unused', 'reference.globalGc', 'trash'),
                 new ActionTreeItem('Wiki Commit', 'reference.wikiCommit', 'check'),
                 new ActionTreeItem('Wiki Sync', 'reference.wikiSync', 'cloud-upload'),
                 new ActionTreeItem('Show Diagnostics', 'reference.diagnostics', 'output'),

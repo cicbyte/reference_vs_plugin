@@ -5,7 +5,7 @@ import { BinaryManager } from '../services/binaryManager';
 import { WorkspaceManager } from '../services/workspaceManager';
 import { RepoTreeProvider, WikiTreeProvider, ActionsTreeProvider } from './treeView';
 import { StatusBar } from './statusBar';
-import { DoctorResult } from '../types';
+import { DoctorResult, GlobalDoctorResult, GlobalDoctorCheck } from '../types';
 
 export class CommandRegistrar {
     constructor(
@@ -45,6 +45,8 @@ export class CommandRegistrar {
             vscode.commands.registerCommand('reference.viewStats', (node?: any) => this.viewStats(node)),
             vscode.commands.registerCommand('reference.diagnostics', () => this.showDiagnostics()),
             vscode.commands.registerCommand('reference.doctor', () => this.runDoctor()),
+            vscode.commands.registerCommand('reference.globalDoctor', () => this.runGlobalDoctor()),
+            vscode.commands.registerCommand('reference.globalGc', () => this.runGlobalGc()),
             vscode.commands.registerCommand('reference.wikiCommit', () => this.wikiCommit()),
             vscode.commands.registerCommand('reference.wikiSync', () => this.wikiSync()),
             // Navigation
@@ -536,6 +538,160 @@ export class CommandRegistrar {
 
     private escapeHtml(s: string): string {
         return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // ─── Global Commands ─────────────────────────────────────
+
+    private async runGlobalDoctor(): Promise<void> {
+        if (!this.requireBinary()) { return; }
+
+        const mode = await vscode.window.showQuickPick(
+            [
+                { label: '$(warning) Issues only', description: 'Show only projects with problems', value: 'issues' as const },
+                { label: '$(list-tree) All projects', description: 'Show every project', value: 'all' as const },
+            ],
+            { placeHolder: 'Global health check scope' },
+        );
+        if (!mode) { return; }
+
+        await vscode.window.withProgress(
+            { title: 'Running global doctor...', location: vscode.ProgressLocation.Notification },
+            async () => {
+                const result = await this.cli.runGlobalDoctor({ issuesOnly: mode.value === 'issues' });
+                if (result.success && result.data) {
+                    const panel = vscode.window.createWebviewPanel(
+                        'reference.globalDoctor',
+                        'Reference — Global Doctor',
+                        vscode.ViewColumn.Active,
+                        { enableScripts: false },
+                    );
+                    panel.webview.html = this.renderGlobalDoctorHtml(result.data);
+                    const s = result.data.summary;
+                    vscode.window.showInformationMessage(
+                        `Global doctor: ${s.healthy}/${s.total_projects} healthy, ${s.with_issues} with issues.`,
+                    );
+                } else {
+                    vscode.window.showErrorMessage(`Global doctor failed: ${result.error}`);
+                }
+            },
+        );
+    }
+
+    private renderGlobalDoctorHtml(result: GlobalDoctorResult): string {
+        const s = result.summary;
+        const rows = result.projects.map(p => {
+            const icon = p.healthy ? '✓' : (p.exists ? '!' : '✕');
+            const cls = p.healthy ? 'ok' : (p.exists ? 'warn' : 'dead');
+            const name = p.project_dir.split(/[\\/]/).pop() || p.project_dir;
+            const agents = (p.agents || []).join(', ') || '—';
+            const issueDetails = p.checks
+                .filter(c => c.status === 'warn')
+                .map(c => this.escapeHtml(c.name))
+                .join('; ');
+            return `<tr>
+                <td class="status status-${cls}">${icon}</td>
+                <td class="name" title="${this.escapeHtml(p.project_dir)}">${this.escapeHtml(name)}</td>
+                <td>${p.repo_count}</td>
+                <td class="agents">${this.escapeHtml(agents)}</td>
+                <td class="details">${issueDetails || (p.healthy ? '—' : '—')}</td>
+            </tr>`;
+        }).join('');
+
+        return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Reference — Global Doctor</title>
+    <style>
+        body { font-family: var(--vscode-font-family); padding: 20px; color: var(--vscode-foreground); }
+        h1 { font-size: 1.5em; margin-bottom: 0.3em; }
+        .chips { display: flex; gap: 10px; margin: 12px 0 20px; flex-wrap: wrap; }
+        .chip { padding: 6px 14px; border-radius: 12px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); }
+        .chip .n { font-weight: bold; font-size: 1.1em; }
+        .chip .l { font-size: 0.85em; color: var(--vscode-descriptionForeground); margin-left: 4px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        th, td { padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--vscode-panel-border); }
+        th { font-weight: 600; color: var(--vscode-descriptionForeground); font-size: 0.9em; }
+        td.status { width: 28px; text-align: center; font-weight: bold; font-size: 1.1em; }
+        td.name { white-space: nowrap; font-weight: 500; }
+        td.agents { color: var(--vscode-descriptionForeground); white-space: nowrap; }
+        td.details { color: var(--vscode-descriptionForeground); }
+        .status-ok { color: var(--vscode-testing-iconPassed); }
+        .status-warn { color: var(--vscode-testing-iconQueued); }
+        .status-dead { color: var(--vscode-testing-iconFailed); }
+    </style>
+</head>
+<body>
+    <h1>Reference — Global Doctor</h1>
+    <div class="chips">
+        <div class="chip"><span class="n">${s.total_projects}</span><span class="l">Total</span></div>
+        <div class="chip"><span class="n">${s.healthy}</span><span class="l">Healthy</span></div>
+        <div class="chip"><span class="n">${s.with_issues}</span><span class="l">Issues</span></div>
+        <div class="chip"><span class="n">${s.deleted}</span><span class="l">Missing dir</span></div>
+    </div>
+    <table>
+        <tr><th></th><th>Project</th><th>Repos</th><th>Agents</th><th>Issues</th></tr>
+        ${rows}
+    </table>
+</body>
+</html>`;
+    }
+
+    private async runGlobalGc(): Promise<void> {
+        if (!this.requireBinary()) { return; }
+
+        const scope = await vscode.window.showQuickPick(
+            [
+                { label: '$(trash) Stale records only', description: 'Remove DB entries for deleted project dirs', value: false as const },
+                { label: '$(trash) Records + orphan cache', description: 'Also delete unreferenced cache dirs (reclaims disk)', value: true as const },
+            ],
+            { placeHolder: 'Select cleanup scope' },
+        );
+        if (!scope) { return; }
+
+        // Step 1: dry-run preview
+        const preview = await vscode.window.withProgress(
+            { title: 'Scanning for cleanup...', location: vscode.ProgressLocation.Notification },
+            () => this.cli.runGlobalGcPreview(scope.value),
+        );
+        if (!preview.success) {
+            vscode.window.showErrorMessage(`Cleanup scan failed: ${preview.error}`);
+            return;
+        }
+
+        const output = (preview.data || '').trim();
+        if (output.includes('一切正常') || output.includes('无需清理')) {
+            vscode.window.showInformationMessage('Nothing to clean up. Everything is tidy.');
+            return;
+        }
+
+        // Show preview in output channel
+        this.outputChannel.show(true);
+        this.outputChannel.appendLine('\n─── GC Preview ───');
+        this.outputChannel.appendLine(output);
+        this.outputChannel.appendLine('──────────────────\n');
+
+        // Step 2: confirm and execute
+        const confirm = await vscode.window.showWarningMessage(
+            'Review the preview in the Output panel. Proceed with cleanup?',
+            { modal: true },
+            'Clean up',
+        );
+        if (confirm !== 'Clean up') { return; }
+
+        await vscode.window.withProgress(
+            { title: 'Cleaning up...', location: vscode.ProgressLocation.Notification },
+            async () => {
+                const result = await this.cli.runGlobalGcExecute(scope.value);
+                if (result.success) {
+                    const msg = (result.data || '').trim() || 'Cleanup complete.';
+                    vscode.window.showInformationMessage(msg);
+                    this.refreshAll();
+                } else {
+                    vscode.window.showErrorMessage(`Cleanup failed: ${result.error}`);
+                }
+            },
+        );
     }
 
     private async wikiCommit(): Promise<void> {

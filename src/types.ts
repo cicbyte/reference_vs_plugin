@@ -70,6 +70,30 @@ export interface DoctorResult {
     summary: string;
 }
 
+export interface GlobalDoctorCheck {
+    project_dir: string;
+    exists: boolean;
+    initialized: boolean;
+    agents: string[] | null;
+    repo_count: number;
+    checks: DoctorCheck[];
+    healthy: boolean;
+    issues_count: number;
+}
+
+export interface GlobalDoctorResult {
+    projects: GlobalDoctorCheck[];
+    summary: {
+        total_projects: number;
+        existing: number;
+        deleted: number;
+        healthy: number;
+        with_issues: number;
+        checks_total: number;
+        checks_failed: number;
+    };
+}
+
 export interface CliResult<T> {
     success: boolean;
     data?: T;
