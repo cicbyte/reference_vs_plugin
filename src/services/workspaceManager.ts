@@ -26,6 +26,26 @@ export class WorkspaceManager {
         return fs.existsSync(path.join(refDir, 'reference.settings.json'));
     }
 
+    /** Read configured agent IDs from reference.settings.json. Returns [] if unset/missing.
+     *  Mirrors CLI's ProjectSettings: `agents[]` is current, legacy single `agent` is migrated. */
+    getSettingsAgents(): string[] {
+        const refDir = this.getReferenceDir();
+        if (!refDir) { return []; }
+        const settingsPath = path.join(refDir, 'reference.settings.json');
+        if (!fs.existsSync(settingsPath)) { return []; }
+        try {
+            const data = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+            const agents: string[] = Array.isArray(data.agents) ? data.agents : [];
+            // legacy migration: single `agent` → array (CLI also does this in MigrateAgent)
+            if (agents.length === 0 && typeof data.agent === 'string' && data.agent) {
+                agents.push(data.agent);
+            }
+            return agents.filter((a: any) => typeof a === 'string' && a);
+        } catch {
+            return [];
+        }
+    }
+
     getReposDir(): string | undefined {
         const refDir = this.getReferenceDir();
         return refDir ? path.join(refDir, 'repos') : undefined;

@@ -124,11 +124,50 @@ export class CommandRegistrar {
     private async initWorkspace(): Promise<void> {
         if (!this.requireBinary()) { return; }
 
-        if (this.ws.isInitialized()) {
-            vscode.window.showInformationMessage('This workspace is already initialized.');
-            return;
+        const existingAgents = this.ws.getSettingsAgents();
+        const initialized = this.ws.isInitialized();
+
+        let agent: string;
+
+        if (initialized && existingAgents.length > 0) {
+            // Already initialized with agents: offer to reuse (CLI merges, so re-init is safe)
+            const reusePick = await vscode.window.showQuickPick(
+                [
+                    { label: `$(check) Reuse current (${existingAgents.join(', ')})`, description: 'Re-run init with existing agents', value: existingAgents.join(',') },
+                    { label: '$(edit) Choose different agents', description: 'Pick a new set of AI assistants', value: '__pick__' },
+                ],
+                { placeHolder: 'Workspace already initialized. Reuse configured agents?' },
+            );
+            if (!reusePick) { return; }
+            if (reusePick.value === '__pick__') {
+                const picked = await this.pickAgents();
+                if (picked === undefined) { return; }
+                agent = picked;
+            } else {
+                agent = reusePick.value;
+            }
+        } else {
+            const picked = await this.pickAgents();
+            if (picked === undefined) { return; }
+            agent = picked;
         }
 
+        await vscode.window.withProgress(
+            { title: `Initializing Reference (agents: ${agent})...`, location: vscode.ProgressLocation.Notification },
+            async () => {
+                const result = await this.cli.init(agent);
+                if (result.success) {
+                    vscode.window.showInformationMessage('Reference initialized successfully.');
+                    this.refreshAll();
+                } else {
+                    vscode.window.showErrorMessage(`Initialization failed: ${result.error}`);
+                }
+            },
+        );
+    }
+
+    /** Pick AI assistants (multi-select). Returns comma-joined IDs, 'none', or undefined if cancelled. */
+    private async pickAgents(): Promise<string | undefined> {
         const agentPicks = await vscode.window.showQuickPick(
             [
                 { label: 'Claude Code', description: 'Inject agent configs into .claude/', id: 'claude' },
@@ -143,23 +182,8 @@ export class CommandRegistrar {
                 title: 'Reference — Choose Agents',
             },
         );
-        if (agentPicks === undefined) { return; } // user pressed Esc
-
-        // CLI init --agent accepts comma-separated IDs; empty/none means no AI config injection.
-        const agent = agentPicks.length > 0 ? agentPicks.map(p => p.id).join(',') : 'none';
-
-        await vscode.window.withProgress(
-            { title: `Initializing Reference (agents: ${agent})...`, location: vscode.ProgressLocation.Notification },
-            async () => {
-                const result = await this.cli.init(agent);
-                if (result.success) {
-                    vscode.window.showInformationMessage('Reference initialized successfully.');
-                    this.refreshAll();
-                } else {
-                    vscode.window.showErrorMessage(`Initialization failed: ${result.error}`);
-                }
-            },
-        );
+        if (agentPicks === undefined) { return undefined; } // user pressed Esc
+        return agentPicks.length > 0 ? agentPicks.map(p => p.id).join(',') : 'none';
     }
 
     // ─── Repo Management ─────────────────────────────────────
