@@ -124,22 +124,29 @@ export class CommandRegistrar {
             return;
         }
 
-        const agentPick = await vscode.window.showQuickPick(
+        const agentPicks = await vscode.window.showQuickPick(
             [
-                { label: '$(sparkle) Claude Code', description: 'Inject Claude Code agent configs (SKILL.md, agents)', agent: 'claude' },
-                { label: '$(circle-slash) None', description: 'Repository management only, no AI agent integration', agent: 'none' },
+                { label: 'Claude Code', description: 'Inject agent configs into .claude/', id: 'claude' },
+                { label: 'Codex', description: 'Inject agent configs into .codex/', id: 'codex' },
+                { label: 'OpenCode', description: 'Inject agent configs into .opencode/', id: 'opencode' },
+                { label: 'ZCode', description: 'Inject agent configs into .zcode/', id: 'zcode' },
+                { label: 'MiMo Code', description: 'Inject agent configs into .mimocode/', id: 'mimocode' },
             ],
             {
-                placeHolder: 'Select your AI coding assistant',
-                title: 'Reference — Choose Agent',
+                canPickMany: true,
+                placeHolder: 'Select AI assistants to inject (multi-select, or skip for repo management only)',
+                title: 'Reference — Choose Agents',
             },
         );
-        if (!agentPick) { return; }
+        if (agentPicks === undefined) { return; } // user pressed Esc
+
+        // CLI init --agent accepts comma-separated IDs; empty/none means no AI config injection.
+        const agent = agentPicks.length > 0 ? agentPicks.map(p => p.id).join(',') : 'none';
 
         await vscode.window.withProgress(
-            { title: `Initializing Reference (agent: ${agentPick.agent})...`, location: vscode.ProgressLocation.Notification },
+            { title: `Initializing Reference (agents: ${agent})...`, location: vscode.ProgressLocation.Notification },
             async () => {
-                const result = await this.cli.init(agentPick.agent);
+                const result = await this.cli.init(agent);
                 if (result.success) {
                     vscode.window.showInformationMessage('Reference initialized successfully.');
                     this.refreshAll();
