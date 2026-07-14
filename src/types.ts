@@ -55,6 +55,21 @@ export interface GlobalStats {
     db_size_bytes: number;
 }
 
+export type DoctorStatus = 'ok' | 'fixed' | 'warn';
+
+export interface DoctorCheck {
+    name: string;
+    status: DoctorStatus;
+    details: string;
+    group: string; // 'core' | 'agent' | ...
+}
+
+export interface DoctorResult {
+    project_dir: string;
+    checks: DoctorCheck[];
+    summary: string;
+}
+
 export interface CliResult<T> {
     success: boolean;
     data?: T;

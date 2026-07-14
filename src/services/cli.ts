@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BinaryManager } from './binaryManager';
-import { RepoEntry, SccEntry, GlobalStats, CliResult } from '../types';
+import { RepoEntry, SccEntry, GlobalStats, DoctorResult, CliResult } from '../types';
 import { WorkspaceManager } from './workspaceManager';
 
 export class ReferenceCLI {
@@ -30,6 +30,27 @@ export class ReferenceCLI {
                 return { success: true, data: JSON.parse(lines[0]) as T };
             }
             return { success: true, data: lines.map(l => JSON.parse(l)) as T };
+        } catch (e: any) {
+            const msg = e.message || String(e);
+            this.outputChannel.appendLine(`[error] ${args.join(' ')}: ${msg}`);
+            return { success: false, error: msg };
+        }
+    }
+
+    /** Run a command with `-f json` and parse a single JSON object. Use for commands
+     *  whose top-level JSON is an object (e.g. doctor returns {project_dir, checks, summary}). */
+    private async runJsonObject<T>(args: string[], cwdOverride?: string): Promise<CliResult<T>> {
+        const execCwd = cwdOverride ?? this.cwd();
+        try {
+            const { stdout, stderr } = await this.binary.exec([...args, '-f', 'json'], { cwd: execCwd });
+            if (stderr) {
+                this.outputChannel.appendLine(`[stderr] ${stderr}`);
+            }
+            const trimmed = stdout.trim();
+            if (!trimmed) {
+                return { success: true, data: undefined as T };
+            }
+            return { success: true, data: JSON.parse(trimmed) as T };
         } catch (e: any) {
             const msg = e.message || String(e);
             this.outputChannel.appendLine(`[error] ${args.join(' ')}: ${msg}`);
@@ -116,6 +137,11 @@ export class ReferenceCLI {
 
     async runDoctor(): Promise<CliResult<string>> {
         return this.runText(['doctor']);
+    }
+
+    /** Structured doctor result via `-f json` (project_dir + checks[] + summary). */
+    async runDoctorStructured(): Promise<CliResult<DoctorResult>> {
+        return this.runJsonObject<DoctorResult>(['doctor']);
     }
 
     async wikiCommit(local = false): Promise<CliResult<string>> {

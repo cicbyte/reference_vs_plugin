@@ -5,6 +5,7 @@ import { BinaryManager } from '../services/binaryManager';
 import { WorkspaceManager } from '../services/workspaceManager';
 import { RepoTreeProvider, WikiTreeProvider, ActionsTreeProvider } from './treeView';
 import { StatusBar } from './statusBar';
+import { DoctorResult } from '../types';
 
 export class CommandRegistrar {
     constructor(
@@ -446,18 +447,95 @@ export class CommandRegistrar {
         await vscode.window.withProgress(
             { title: 'Running reference doctor...', location: vscode.ProgressLocation.Notification },
             async () => {
-                const result = await this.cli.runDoctor();
-                if (result.success) {
-                    this.outputChannel.show(true);
-                    this.outputChannel.appendLine('\n─── Doctor ───');
-                    this.outputChannel.appendLine(result.data || 'No issues found.');
-                    this.outputChannel.appendLine('──────────────\n');
-                    vscode.window.showInformationMessage('Doctor check complete. See output for details.');
+                const result = await this.cli.runDoctorStructured();
+                if (result.success && result.data) {
+                    this.outputChannel.appendLine(`[doctor] ${result.data.summary}`);
+                    const panel = vscode.window.createWebviewPanel(
+                        'reference.doctor',
+                        'Reference — Doctor',
+                        vscode.ViewColumn.Active,
+                        { enableScripts: false },
+                    );
+                    panel.webview.html = this.renderDoctorHtml(result.data);
+                    vscode.window.showInformationMessage('Doctor check complete.');
                 } else {
                     vscode.window.showErrorMessage(`Doctor failed: ${result.error}`);
                 }
             },
         );
+    }
+
+    private doctorStatusMeta(status: string): { icon: string; label: string; color: string } {
+        switch (status) {
+            case 'ok':    return { icon: '✓', label: 'OK',    color: 'var(--vscode-testing-iconPassed)' };
+            case 'fixed': return { icon: '✎', label: 'Fixed', color: 'var(--vscode-testing-iconQueued)' };
+            case 'warn':  return { icon: '!', label: 'Warn',  color: 'var(--vscode-testing-iconFailed)' };
+            default:      return { icon: '?', label: status,  color: 'var(--vscode-descriptionForeground)' };
+        }
+    }
+
+    private renderDoctorHtml(result: DoctorResult): string {
+        const groups = ['core', 'agent'].filter(g => result.checks.some(c => c.group === g));
+        const renderGroup = (group: string) => {
+            const rows = result.checks
+                .filter(c => c.group === group)
+                .map(c => {
+                    const m = this.doctorStatusMeta(c.status);
+                    return `<tr>
+                        <td class="status status-${c.status}">${m.icon}</td>
+                        <td class="name">${this.escapeHtml(c.name)}</td>
+                        <td class="details">${this.escapeHtml(c.details)}</td>
+                    </tr>`;
+                })
+                .join('');
+            const label = group === 'core' ? 'Core' : group.charAt(0).toUpperCase() + group.slice(1);
+            return `<h2>${label}</h2><table><tr><th></th><th>Check</th><th>Details</th></tr>${rows}</table>`;
+        };
+
+        const warnCount = result.checks.filter(c => c.status === 'warn').length;
+        const fixedCount = result.checks.filter(c => c.status === 'fixed').length;
+        const okCount = result.checks.filter(c => c.status === 'ok').length;
+
+        return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Reference — Doctor</title>
+    <style>
+        body { font-family: var(--vscode-font-family); padding: 20px; color: var(--vscode-foreground); }
+        h1 { font-size: 1.5em; margin-bottom: 0.3em; }
+        h2 { font-size: 1.15em; margin-top: 1.5em; margin-bottom: 0.4em; color: var(--vscode-foreground); }
+        .summary { color: var(--vscode-descriptionForeground); margin-bottom: 1em; }
+        .chips { display: flex; gap: 10px; margin: 12px 0 20px; }
+        .chip { padding: 6px 14px; border-radius: 12px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); }
+        .chip .n { font-weight: bold; font-size: 1.1em; }
+        .chip .l { font-size: 0.85em; color: var(--vscode-descriptionForeground); margin-left: 4px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        th, td { padding: 7px 12px; text-align: left; border-bottom: 1px solid var(--vscode-panel-border); }
+        th { font-weight: 600; color: var(--vscode-descriptionForeground); font-size: 0.9em; }
+        td.status { width: 28px; text-align: center; font-weight: bold; font-size: 1.1em; }
+        td.name { white-space: nowrap; font-weight: 500; }
+        td.details { color: var(--vscode-descriptionForeground); }
+        .status-ok { color: var(--vscode-testing-iconPassed); }
+        .status-fixed { color: var(--vscode-testing-iconQueued); }
+        .status-warn { color: var(--vscode-testing-iconFailed); }
+    </style>
+</head>
+<body>
+    <h1>Reference — Doctor</h1>
+    <div class="summary">${this.escapeHtml(result.summary)}</div>
+    <div class="chips">
+        <div class="chip"><span class="n">${okCount}</span><span class="l">OK</span></div>
+        <div class="chip"><span class="n">${fixedCount}</span><span class="l">Fixed</span></div>
+        <div class="chip"><span class="n">${warnCount}</span><span class="l">Warn</span></div>
+    </div>
+    ${groups.map(renderGroup).join('')}
+</body>
+</html>`;
+    }
+
+    private escapeHtml(s: string): string {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
     private async wikiCommit(): Promise<void> {
