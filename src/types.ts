@@ -94,6 +94,27 @@ export interface GlobalDoctorResult {
     };
 }
 
+export interface GlobalRepoItem {
+    name: string;
+    type: string; // remote | local
+    ref_name: string;
+}
+
+export interface GlobalProjectItem {
+    project_dir: string;
+    exists: boolean;
+    initialized: boolean;
+    agents: string[];
+    repo_count: number;
+    broken_count: number;
+    repos: GlobalRepoItem[];
+}
+
+export interface GlobalListResult {
+    projects: GlobalProjectItem[];
+    total_projects: number;
+}
+
 export interface CliResult<T> {
     success: boolean;
     data?: T;

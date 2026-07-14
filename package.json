@@ -140,6 +140,14 @@
         "title": "Reference: Clean Up Unused References & Cache"
       },
       {
+        "command": "reference.globalList",
+        "title": "Reference: Show All Projects"
+      },
+      {
+        "command": "reference.globalRemove",
+        "title": "Reference: Remove Global Reference"
+      },
+      {
         "command": "reference.wikiCommit",
         "title": "Reference: Wiki Commit"
       },

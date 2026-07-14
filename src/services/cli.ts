@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BinaryManager } from './binaryManager';
-import { RepoEntry, SccEntry, GlobalStats, DoctorResult, GlobalDoctorResult, CliResult } from '../types';
+import { RepoEntry, SccEntry, GlobalStats, DoctorResult, GlobalDoctorResult, GlobalListResult, CliResult } from '../types';
 import { WorkspaceManager } from './workspaceManager';
 
 export class ReferenceCLI {
@@ -178,6 +178,40 @@ export class ReferenceCLI {
     async runGlobalGcExecute(cleanCache = false): Promise<CliResult<string>> {
         const args = ['global', 'gc', '--yes'];
         if (cleanCache) { args.push('--cache'); }
+        return this.runText(args);
+    }
+
+    /** Global list: all projects and their repo references via `-f json`. */
+    async runGlobalList(): Promise<CliResult<GlobalListResult>> {
+        const execCwd = this.cwd();
+        try {
+            const { stdout, stderr } = await this.binary.exec(['global', 'list', '-f', 'json'], { cwd: execCwd });
+            if (stderr) {
+                this.outputChannel.appendLine(`[stderr] ${stderr}`);
+            }
+            const trimmed = stdout.trim();
+            if (!trimmed) {
+                return { success: true, data: { projects: [], total_projects: 0 } };
+            }
+            return { success: true, data: JSON.parse(trimmed) as GlobalListResult };
+        } catch (e: any) {
+            const msg = e.message || String(e);
+            this.outputChannel.appendLine(`[error] global list: ${msg}`);
+            return { success: false, error: msg };
+        }
+    }
+
+    /** Global remove: remove a repo from a specific project. --yes skips prompt. */
+    async runGlobalRemove(projectDir: string, refName: string, purge = false): Promise<CliResult<string>> {
+        const args = ['global', 'remove', '--project', projectDir, '--repo', refName, '--yes'];
+        if (purge) { args.push('--purge'); }
+        return this.runText(args);
+    }
+
+    /** Global remove all references from a project. */
+    async runGlobalRemoveAll(projectDir: string, purge = false): Promise<CliResult<string>> {
+        const args = ['global', 'remove', '--project', projectDir, '--all', '--yes'];
+        if (purge) { args.push('--purge'); }
         return this.runText(args);
     }
 

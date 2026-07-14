@@ -5,7 +5,7 @@ import { BinaryManager } from '../services/binaryManager';
 import { WorkspaceManager } from '../services/workspaceManager';
 import { RepoTreeProvider, WikiTreeProvider, ActionsTreeProvider } from './treeView';
 import { StatusBar } from './statusBar';
-import { DoctorResult, GlobalDoctorResult, GlobalDoctorCheck } from '../types';
+import { DoctorResult, GlobalDoctorResult, GlobalDoctorCheck, GlobalListResult, GlobalProjectItem } from '../types';
 
 export class CommandRegistrar {
     constructor(
@@ -47,6 +47,8 @@ export class CommandRegistrar {
             vscode.commands.registerCommand('reference.doctor', () => this.runDoctor()),
             vscode.commands.registerCommand('reference.globalDoctor', () => this.runGlobalDoctor()),
             vscode.commands.registerCommand('reference.globalGc', () => this.runGlobalGc()),
+            vscode.commands.registerCommand('reference.globalList', () => this.runGlobalList()),
+            vscode.commands.registerCommand('reference.globalRemove', () => this.runGlobalRemove()),
             vscode.commands.registerCommand('reference.wikiCommit', () => this.wikiCommit()),
             vscode.commands.registerCommand('reference.wikiSync', () => this.wikiSync()),
             // Navigation
@@ -689,6 +691,180 @@ export class CommandRegistrar {
                     this.refreshAll();
                 } else {
                     vscode.window.showErrorMessage(`Cleanup failed: ${result.error}`);
+                }
+            },
+        );
+    }
+
+    private async runGlobalList(): Promise<void> {
+        if (!this.requireBinary()) { return; }
+
+        await vscode.window.withProgress(
+            { title: 'Loading global project list...', location: vscode.ProgressLocation.Notification },
+            async () => {
+                const result = await this.cli.runGlobalList();
+                if (result.success && result.data) {
+                    const panel = vscode.window.createWebviewPanel(
+                        'reference.globalList',
+                        'Reference — All Projects',
+                        vscode.ViewColumn.Active,
+                        { enableScripts: false },
+                    );
+                    panel.webview.html = this.renderGlobalListHtml(result.data);
+                    vscode.window.showInformationMessage(
+                        `${result.data.total_projects} projects, ${result.data.projects.reduce((s, p) => s + p.repo_count, 0)} references.`,
+                    );
+                } else {
+                    vscode.window.showErrorMessage(`Global list failed: ${result.error}`);
+                }
+            },
+        );
+    }
+
+    private renderGlobalListHtml(result: GlobalListResult): string {
+        const sorted = [...result.projects].sort((a, b) => {
+            // missing dirs last, then by name
+            if (a.exists !== b.exists) { return a.exists ? -1 : 1; }
+            return (a.project_dir.split(/[\\/]/).pop() || '').localeCompare(b.project_dir.split(/[\\/]/).pop() || '');
+        });
+
+        const totalRepos = sorted.reduce((s, p) => s + p.repo_count, 0);
+        const broken = sorted.reduce((s, p) => s + p.broken_count, 0);
+        const missing = sorted.filter(p => !p.exists).length;
+
+        const projects = sorted.map(p => {
+            const name = p.project_dir.split(/[\\/]/).pop() || p.project_dir;
+            const agents = (p.agents || []).join(', ') || '—';
+            const statusCls = p.exists ? (p.broken_count > 0 ? 'warn' : 'ok') : 'dead';
+            const statusIcon = p.exists ? (p.broken_count > 0 ? '!' : '✓') : '✕';
+            const statusLabel = p.exists ? (p.broken_count > 0 ? `${p.broken_count} broken` : 'healthy') : 'missing dir';
+            const repos = (p.repos || []).map(r => {
+                const rIcon = r.type === 'local' ? 'folder' : 'globe';
+                return `<span class="repo-tag" title="${this.escapeHtml(r.ref_name)} (${r.type})">${this.escapeHtml(r.ref_name)}</span>`;
+            }).join('') || '<span class="muted">none</span>';
+            return `<tr class="${p.exists ? '' : 'missing'}">
+                <td class="status status-${statusCls}" title="${statusLabel}">${statusIcon}</td>
+                <td class="name" title="${this.escapeHtml(p.project_dir)}">${this.escapeHtml(name)}${p.initialized ? '' : ' <span class="badge">uninit</span>'}</td>
+                <td>${p.repo_count}</td>
+                <td class="agents">${this.escapeHtml(agents)}</td>
+                <td class="repos">${repos}</td>
+            </tr>`;
+        }).join('');
+
+        return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Reference — All Projects</title>
+    <style>
+        body { font-family: var(--vscode-font-family); padding: 20px; color: var(--vscode-foreground); }
+        h1 { font-size: 1.5em; margin-bottom: 0.3em; }
+        .chips { display: flex; gap: 10px; margin: 12px 0 20px; flex-wrap: wrap; }
+        .chip { padding: 6px 14px; border-radius: 12px; background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); }
+        .chip .n { font-weight: bold; font-size: 1.1em; }
+        .chip .l { font-size: 0.85em; color: var(--vscode-descriptionForeground); margin-left: 4px; }
+        .hint { color: var(--vscode-descriptionForeground); font-size: 0.85em; margin-bottom: 12px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--vscode-panel-border); vertical-align: top; }
+        th { font-weight: 600; color: var(--vscode-descriptionForeground); font-size: 0.9em; }
+        td.status { width: 28px; text-align: center; font-weight: bold; }
+        td.name { white-space: nowrap; font-weight: 500; }
+        td.agents { color: var(--vscode-descriptionForeground); white-space: nowrap; }
+        td.repos { max-width: 480px; }
+        .repo-tag { display: inline-block; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); padding: 1px 7px; border-radius: 9px; font-size: 0.8em; margin: 1px 3px; white-space: nowrap; }
+        .badge { background: var(--vscode-inputOption-activeBorder); color: var(--vscode-descriptionForeground); padding: 0 5px; border-radius: 4px; font-size: 0.75em; font-weight: normal; }
+        .muted { color: var(--vscode-descriptionForeground); font-style: italic; }
+        tr.missing td { opacity: 0.6; }
+        .status-ok { color: var(--vscode-testing-iconPassed); }
+        .status-warn { color: var(--vscode-testing-iconQueued); }
+        .status-dead { color: var(--vscode-testing-iconFailed); }
+    </style>
+</head>
+<body>
+    <h1>Reference — All Projects</h1>
+    <div class="chips">
+        <div class="chip"><span class="n">${result.total_projects}</span><span class="l">Projects</span></div>
+        <div class="chip"><span class="n">${totalRepos}</span><span class="l">References</span></div>
+        <div class="chip"><span class="n">${broken}</span><span class="l">Broken</span></div>
+        <div class="chip"><span class="n">${missing}</span><span class="l">Missing</span></div>
+    </div>
+    <div class="hint">To remove a reference or clean up, use the command palette: <code>Reference: Remove Global Reference</code></div>
+    <table>
+        <tr><th></th><th>Project</th><th>Repos</th><th>Agents</th><th>References</th></tr>
+        ${projects}
+    </table>
+</body>
+</html>`;
+    }
+
+    private async runGlobalRemove(): Promise<void> {
+        if (!this.requireBinary()) { return; }
+
+        // Step 1: load projects
+        const listResult = await this.cli.runGlobalList();
+        if (!listResult.success || !listResult.data) {
+            vscode.window.showErrorMessage(`Failed to load projects: ${listResult.error}`);
+            return;
+        }
+        const projects = listResult.data.projects;
+        if (projects.length === 0) {
+            vscode.window.showInformationMessage('No projects found.');
+            return;
+        }
+
+        // Step 2: pick a project
+        const projectPick = await vscode.window.showQuickPick(
+            projects.map(p => {
+                const name = p.project_dir.split(/[\\/]/).pop() || p.project_dir;
+                const tag = p.exists ? (p.broken_count > 0 ? '⚠ broken' : '') : '✕ missing';
+                return {
+                    label: name,
+                    description: tag || (p.repo_count > 0 ? `${p.repo_count} repos` : ''),
+                    detail: p.project_dir,
+                    project: p,
+                };
+            }),
+            { placeHolder: 'Select a project', title: 'Reference — Remove Global Reference' },
+        );
+        if (!projectPick) { return; }
+
+        // Step 3: pick repo or all
+        const targetPick = await vscode.window.showQuickPick(
+            [
+                { label: '$(trash) All references', description: 'Remove every reference from this project', mode: 'all' as const },
+                ...projectPick.project.repos.map(r => ({
+                    label: `$(link) ${r.ref_name}`,
+                    description: r.type,
+                    detail: r.name,
+                    mode: 'one' as const,
+                    refName: r.ref_name,
+                })),
+            ],
+            { placeHolder: `Select what to remove from "${projectPick.label}"` },
+        );
+        if (!targetPick) { return; }
+
+        // Step 4: confirm
+        const what = targetPick.mode === 'all' ? 'ALL references' : `"${(targetPick as any).refName}"`;
+        const confirm = await vscode.window.showWarningMessage(
+            `Remove ${what} from "${projectPick.label}"?`,
+            { modal: true },
+            'Remove',
+        );
+        if (confirm !== 'Remove') { return; }
+
+        // Step 5: execute
+        await vscode.window.withProgress(
+            { title: `Removing ${what}...`, location: vscode.ProgressLocation.Notification },
+            async () => {
+                const result = targetPick.mode === 'all'
+                    ? await this.cli.runGlobalRemoveAll(projectPick.project.project_dir)
+                    : await this.cli.runGlobalRemove(projectPick.project.project_dir, (targetPick as any).refName);
+                if (result.success) {
+                    vscode.window.showInformationMessage(`Removed ${what} from "${projectPick.label}".`);
+                    this.refreshAll();
+                } else {
+                    vscode.window.showErrorMessage(`Remove failed: ${result.error}`);
                 }
             },
         );
