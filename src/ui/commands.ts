@@ -462,31 +462,58 @@ export class CommandRegistrar {
 
     private async wikiCommit(): Promise<void> {
         if (!this.requireBinary()) { return; }
+        const targets = await this.pickWikiTargets('commit changes to');
+        if (!targets) { return; }
 
-        const result = await this.cli.wikiCommit();
-        if (result.success) {
-            vscode.window.showInformationMessage('Wiki changes committed.');
-            this.refreshAll();
-        } else {
-            vscode.window.showErrorMessage(`Wiki commit failed: ${result.error}`);
+        const ok: string[] = [];
+        for (const local of targets) {
+            const result = await this.cli.wikiCommit(local);
+            if (result.success) {
+                ok.push(local ? 'Local' : 'Remote');
+            } else {
+                vscode.window.showErrorMessage(`Wiki commit (${local ? 'local' : 'remote'}) failed: ${result.error}`);
+                return; // stop on first failure; remote and localwiki are independent git repos
+            }
         }
+        vscode.window.showInformationMessage(`Wiki changes committed (${ok.join(' + ')}).`);
+        this.refreshAll();
     }
 
     private async wikiSync(): Promise<void> {
         if (!this.requireBinary()) { return; }
+        const targets = await this.pickWikiTargets('sync');
+        if (!targets) { return; }
 
         await vscode.window.withProgress(
             { title: 'Syncing wiki...', location: vscode.ProgressLocation.Notification },
             async () => {
-                const result = await this.cli.wikiSync();
-                if (result.success) {
-                    vscode.window.showInformationMessage('Wiki synced.');
-                    this.refreshAll();
-                } else {
-                    vscode.window.showErrorMessage(`Wiki sync failed: ${result.error}`);
+                const ok: string[] = [];
+                for (const local of targets) {
+                    const result = await this.cli.wikiSync(local);
+                    if (result.success) {
+                        ok.push(local ? 'Local' : 'Remote');
+                    } else {
+                        vscode.window.showErrorMessage(`Wiki sync (${local ? 'local' : 'remote'}) failed: ${result.error}`);
+                        return; // stop on first failure
+                    }
                 }
+                vscode.window.showInformationMessage(`Wiki synced (${ok.join(' + ')}).`);
+                this.refreshAll();
             },
         );
+    }
+
+    /** Pick which wiki(s) to operate on. Returns undefined if cancelled. */
+    private async pickWikiTargets(action: string): Promise<boolean[] | undefined> {
+        const pick = await vscode.window.showQuickPick(
+            [
+                { label: '$(globe) Remote Wiki', description: 'Public knowledge base for remote repos', targets: [false] },
+                { label: '$(folder) Local Knowledge Base', description: 'localwiki for local repos', targets: [true] },
+                { label: '$(sync) Both', description: 'Remote then Local', targets: [false, true] },
+            ],
+            { placeHolder: `Select knowledge base to ${action}` },
+        );
+        return pick?.targets;
     }
 
     // ─── Navigation ──────────────────────────────────────────

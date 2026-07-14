@@ -118,12 +118,16 @@ export class ReferenceCLI {
         return this.runText(['doctor']);
     }
 
-    async wikiCommit(): Promise<CliResult<string>> {
-        return this.runText(['wiki', 'commit']);
+    async wikiCommit(local = false): Promise<CliResult<string>> {
+        const args = ['wiki', 'commit'];
+        if (local) { args.push('--local'); }
+        return this.runText(args);
     }
 
-    async wikiSync(): Promise<CliResult<string>> {
-        return this.runText(['wiki', 'sync']);
+    async wikiSync(local = false): Promise<CliResult<string>> {
+        const args = ['wiki', 'sync'];
+        if (local) { args.push('--local'); }
+        return this.runText(args);
     }
 
 }
