@@ -11,17 +11,20 @@
 
 ## Features
 
+- **Multi-AI Assistant Integration** — Multi-select agent injection at init (Claude Code, Codex, OpenCode, ZCode, MiMo Code); auto-generates sub-agents and Skill files
 - **Repository Reference Management** — Add (remote/local), update, and remove Git repository references through a GUI — no terminal needed
 - **Source Code Browser** — Browse referenced repository directory structures in the sidebar tree view; click any file to open it
-- **Knowledge File Management** — View `.md` knowledge files under `.reference/wiki/`, grouped by repository
+- **Knowledge File Management** — View `.md` knowledge files under `.reference/wiki/`, grouped by repository; commit/sync targets remote wiki, local knowledge base (localwiki), or both
 - **Code Statistics** — Webview displaying language distribution, lines of code, complexity, and top file rankings
+- **Health Diagnostics** — Per-project doctor (structured checklist Webview) and cross-project global health check (concurrent scan to spot broken references)
+- **Global Management** — Overview of all projects (reference counts, missing projects, agent configs); clean up stale records and orphan cache; remove references across projects
 - **Status Bar Integration** — Real-time repo count and sync status in the status bar
 - **Auto Refresh** — Watches `.reference/` for changes and automatically updates tree views
-- **Workspace Init Guide** — Automatically guides initialization when `.reference/` is not present
+- **Workspace Init Guide** — Guides initialization when `.reference/` is absent; initialized workspaces can reuse or reselect agents
 
 ## Prerequisites
 
-This extension is a graphical frontend for the [reference](https://github.com/cicbyte/reference) CLI tool and **contains no business logic**. Install the `reference` binary before use:
+This extension is a graphical frontend for the [reference](https://github.com/cicbyte/reference) CLI tool and **contains no business logic**. Install the `reference` binary (**v0.0.8+**; multi-AI-agent, localwiki and other features depend on this version) before use:
 
 ```bash
 # Go install
@@ -59,13 +62,13 @@ npm run build
 
 ### Initialize
 
-When using for the first time in a project, click the Reference icon in the activity bar, then click **Initialize Now**.
+When using for the first time in a project, click the Reference icon in the activity bar, then click **Initialize Now**. In the multi-select list, pick the AI assistants to inject (Claude Code, Codex, OpenCode, ZCode, MiMo Code); select none for repository management only. An already-initialized workspace prompts to reuse the current agents or pick a new set.
 
 ### Add Repository
 
 Via the sidebar **+** button or Command Palette `Reference: Add Repository`:
 
-- **Remote** — Enter a Git URL (e.g. `github.com/gin-gonic/gin`), optionally specify branch and clone depth
+- **Remote** — Enter a Git URL (e.g. `github.com/gin-gonic/gin`), optionally specify a branch; the latest cache is pulled
 - **Local** — Select a local Git repository path and enter a reference name
 
 ### Manage References
@@ -88,15 +91,21 @@ All commands are prefixed with `Reference:` and accessible via `Ctrl+Shift+P`:
 
 | Command | Description |
 |---------|-------------|
-| `Reference: Add Repository` | Add a remote or local repository |
+| `Reference: Add Repository` | Add a remote or local repository (remote pulls latest cache) |
 | `Reference: Remove Repository` | Remove a single repository |
 | `Reference: Remove All Repositories` | Remove all repositories (optionally clean .reference/) |
-| `Reference: Update Repository` | Update a single repository |
-| `Reference: Update All Repositories` | Update all repositories |
-| `Reference: Show Code Statistics` | Code statistics webview |
+| `Reference: Update Repository` | Update a single repository's cache |
+| `Reference: Initialize Workspace` | Initialize the workspace; multi-select agent injection |
+| `Reference: Show Code Statistics` | Code statistics Webview |
+| `Reference: Run Doctor` | Per-project diagnostics (structured checklist Webview) |
+| `Reference: Global Health Check` | Cross-project concurrent health scan |
+| `Reference: Show All Projects` | Global projects overview Webview |
+| `Reference: Remove Global Reference` | Remove a reference across projects |
+| `Reference: Clean Up Unused References & Cache` | Clean stale records and orphan cache (dry-run preview + confirm) |
+| `Reference: Wiki Commit` | Commit knowledge base changes (remote / local / both) |
+| `Reference: Wiki Sync` | Sync knowledge base (pull + commit + push) |
 | `Reference: Check CLI Installation` | Check CLI installation status |
 | `Reference: Show Diagnostics & Logs` | Open output channel for logs |
-| `Reference: Open Cache Directory` | Open global cache directory |
 
 ## Configuration
 
